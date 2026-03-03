@@ -1,0 +1,3434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Nudge</title>
+<meta name="theme-color" content="#E76F51">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nudge">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Nudge — your friendly daily companion for medications, reminders, appointments and more.">
+<link rel="manifest" id="pwa-manifest">
+<link rel="apple-touch-icon" id="apple-touch-icon">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Lora:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --warm-orange:#E8845A; --soft-green:#7DBE8E; --sky-blue:#7BB8D4;
+    --lavender:#A89CC8; --rose:#D4768A; --teal:#5BBCB0; --gold:#E8B84B;
+    --cream:#FFF8F0; --text-dark:#3D2B1F; --text-mid:#6B4C3B;
+    --card-bg:#FFFAF4; --shadow:0 4px 20px rgba(100,60,30,0.12); --radius:20px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Nunito',sans-serif; background:var(--cream); color:var(--text-dark); min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:110px; }
+
+  /* HEADER */
+  .header { background:linear-gradient(135deg,#F4A261 0%,#E76F51 100%); padding:20px 20px 16px; text-align:center; border-radius:0 0 30px 30px; box-shadow:0 4px 20px rgba(231,111,81,0.3); }
+  .header h1 { font-family:'Lora',serif; font-size:26px; color:white; margin-bottom:4px; }
+  .header .date { font-size:14px; color:rgba(255,255,255,0.85); font-weight:600; }
+
+  /* NAV - 2-row grid, phone-friendly */
+  .nav-wrap { padding:10px 12px 0; }
+  .nav { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; background:white; border-radius:18px; padding:6px; box-shadow:var(--shadow); }
+  .nav-btn { padding:8px 4px; border:none; background:transparent; border-radius:12px; font-family:'Nunito',sans-serif; font-size:10px; font-weight:700; color:var(--text-mid); cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .nav-btn .icon { font-size:22px; }
+  .nav-btn.active { background:var(--warm-orange); color:white; box-shadow:0 3px 12px rgba(232,132,90,0.4); }
+
+  /* SECTIONS */
+  .section { display:none; padding:14px; }
+  .section.active { display:block; }
+
+  /* CARDS */
+  .card { background:var(--card-bg); border-radius:var(--radius); padding:18px; margin-bottom:14px; box-shadow:var(--shadow); border-left:5px solid var(--warm-orange); }
+  .card.green  { border-left-color:var(--soft-green); }
+  .card.blue   { border-left-color:var(--sky-blue); }
+  .card.purple { border-left-color:var(--lavender); }
+  .card.rose   { border-left-color:var(--rose); }
+  .card.teal   { border-left-color:var(--teal); }
+  .card.gold   { border-left-color:var(--gold); }
+  .card-title  { font-family:'Lora',serif; font-size:19px; font-weight:600; margin-bottom:13px; color:var(--text-dark); }
+
+  /* FORM */
+  label { display:block; font-size:14px; font-weight:700; color:var(--text-mid); margin-bottom:4px; margin-top:11px; }
+  input,select,textarea { width:100%; padding:13px 15px; border:2px solid #E8D5C4; border-radius:12px; font-family:'Nunito',sans-serif; font-size:16px; color:var(--text-dark); background:white; outline:none; transition:border 0.2s; }
+  input:focus,select:focus,textarea:focus { border-color:var(--warm-orange); }
+  textarea { min-height:80px; resize:vertical; }
+
+  /* BUTTONS */
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:13px 22px; border:none; border-radius:14px; font-family:'Nunito',sans-serif; font-size:16px; font-weight:800; cursor:pointer; transition:all 0.2s; margin-top:11px; }
+  .btn-primary { background:var(--warm-orange); color:white; width:100%; justify-content:center; box-shadow:0 4px 14px rgba(232,132,90,0.35); }
+  .btn-primary:active { transform:scale(0.98); }
+  .btn-mic { background:var(--lavender); color:white; padding:13px 16px; margin-top:0; border-radius:12px; }
+  .btn-mic.listening { background:var(--rose); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,118,138,0.5)} 50%{box-shadow:0 0 0 10px rgba(212,118,138,0)} }
+  .input-row { display:flex; gap:8px; align-items:flex-end; }
+  .input-row > div { flex:1; }
+
+  /* ITEMS */
+  .item { background:white; border-radius:14px; padding:13px 15px; margin-bottom:9px; display:flex; justify-content:space-between; align-items:flex-start; box-shadow:0 2px 10px rgba(100,60,30,0.08); animation:slideIn 0.3s ease; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+  .item-content { flex:1; }
+  .item-name   { font-size:16px; font-weight:800; color:var(--text-dark); }
+  .item-detail { font-size:13px; color:var(--text-mid); margin-top:3px; }
+  .item-badge  { font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; margin-left:8px; }
+  .badge-green { background:#DFF2E4; color:#4A9B5F; }
+  .badge-blue  { background:#D8EDF7; color:#3A7FA0; }
+  .badge-rose  { background:#F9E0E6; color:var(--rose); }
+  .badge-teal  { background:#D4F2EF; color:#2E8A81; }
+  .delete-btn  { background:none; border:none; font-size:18px; cursor:pointer; padding:0 4px; color:#CCC; margin-left:6px; }
+  .delete-btn:hover { color:var(--rose); }
+
+  /* SECTION HEADER */
+  .section-header { font-family:'Lora',serif; font-size:21px; font-weight:600; color:var(--text-dark); margin-bottom:13px; padding-left:3px; }
+
+  /* ALERT BANNER */
+  .alert-banner { background:linear-gradient(135deg,#DFF2E4,#C8ECD3); border-radius:14px; padding:13px 17px; margin-bottom:13px; display:flex; align-items:center; gap:12px; font-size:14px; font-weight:700; color:#2D6B40; }
+
+  /* HOME */
+  .home-greeting { font-family:'Lora',serif; font-size:23px; font-weight:600; color:var(--text-dark); margin-bottom:3px; }
+  .home-sub      { font-size:13px; color:var(--text-mid); margin-bottom:16px; }
+  .home-section-title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--text-mid); margin:16px 0 7px 2px; }
+  .home-row { background:white; border-radius:14px; padding:13px 15px; margin-bottom:9px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 10px rgba(100,60,30,0.08); }
+
+  /* MED CHECKBOXES */
+  .med-check-item { background:white; border-radius:14px; padding:13px 15px; margin-bottom:9px; display:flex; align-items:center; gap:13px; box-shadow:0 2px 10px rgba(100,60,30,0.08); cursor:pointer; transition:all 0.2s; }
+  .med-check-item.checked { opacity:0.55; background:#F0FAF2; }
+  .med-checkbox { width:28px; height:28px; border-radius:8px; border:3px solid #C8E6CB; background:white; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; transition:all 0.2s; }
+  .med-check-item.checked .med-checkbox { background:var(--soft-green); border-color:var(--soft-green); }
+  .med-check-label { flex:1; }
+  .med-check-name   { font-size:16px; font-weight:800; color:var(--text-dark); }
+  .med-check-detail { font-size:13px; color:var(--text-mid); margin-top:2px; }
+  .med-check-item.checked .med-check-name { text-decoration:line-through; color:#999; }
+  .progress-bar-wrap { background:#EEE; border-radius:20px; height:9px; margin:7px 0 3px; overflow:hidden; }
+  .progress-bar-fill { height:100%; border-radius:20px; background:linear-gradient(90deg,var(--soft-green),#4CAF50); transition:width 0.4s ease; }
+  .progress-label { font-size:12px; color:var(--text-mid); font-weight:700; text-align:right; }
+  .all-done-banner { background:linear-gradient(135deg,#DFF2E4,#C8ECD3); border-radius:14px; padding:14px 18px; text-align:center; font-size:15px; font-weight:700; color:#2D6B40; margin-bottom:9px; }
+  .upcoming-tag { display:inline-block; background:#FDE8D8; color:var(--warm-orange); font-size:12px; font-weight:800; padding:3px 10px; border-radius:20px; margin-top:4px; }
+
+  /* EMERGENCY */
+  .emergency-card { background:linear-gradient(135deg,#F9E0E6,#FDE8D8); border-radius:var(--radius); padding:18px; margin-bottom:13px; box-shadow:var(--shadow); }
+  .call-btn { display:flex; align-items:center; gap:12px; background:white; border:none; border-radius:14px; padding:13px 17px; width:100%; margin-bottom:9px; cursor:pointer; box-shadow:0 2px 10px rgba(100,60,30,0.1); font-family:'Nunito',sans-serif; transition:all 0.2s; }
+  .call-btn:active { transform:scale(0.97); }
+  .call-icon { font-size:28px; }
+  .call-info { text-align:left; }
+  .call-name   { font-size:16px; font-weight:800; color:var(--text-dark); }
+  .call-number { font-size:13px; color:var(--text-mid); }
+
+  /* AVATAR PICKER */
+  .avatar-option { font-size:26px; width:46px; height:46px; border-radius:12px; border:3px solid transparent; background:white; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; box-shadow:0 2px 8px rgba(100,60,30,0.1); }
+  .avatar-option.selected { border-color:var(--rose); background:#F9E0E6; transform:scale(1.1); }
+
+  /* GROCERY LIST */
+  .grocery-item { background:white; border-radius:14px; padding:12px 15px; margin-bottom:8px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 10px rgba(100,60,30,0.08); }
+  .grocery-check { width:26px; height:26px; border-radius:8px; border:3px solid #C8E6CB; background:white; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; cursor:pointer; transition:all 0.2s; }
+  .grocery-item.checked .grocery-check { background:var(--soft-green); border-color:var(--soft-green); }
+  .grocery-item.checked .grocery-label { text-decoration:line-through; opacity:0.5; }
+  .grocery-label { flex:1; font-size:16px; font-weight:700; color:var(--text-dark); }
+  .grocery-qty   { font-size:13px; color:var(--text-mid); margin-right:6px; }
+  .grocery-cat-header { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--text-mid); margin:12px 0 6px 2px; }
+
+  /* GAMES */
+  .game-card   { background:var(--card-bg); border-radius:var(--radius); padding:18px; margin-bottom:15px; box-shadow:var(--shadow); }
+  .game-title  { font-family:'Lora',serif; font-size:19px; font-weight:600; margin-bottom:5px; color:var(--text-dark); }
+  .game-desc   { font-size:13px; color:var(--text-mid); margin-bottom:12px; }
+  .game-area   { background:white; border-radius:14px; padding:15px; }
+  .trivia-question { font-size:16px; font-weight:700; color:var(--text-dark); margin-bottom:13px; line-height:1.5; }
+  .trivia-option { width:100%; padding:11px 15px; margin-bottom:7px; border:2px solid #E8D5C4; border-radius:12px; background:white; font-family:'Nunito',sans-serif; font-size:14px; font-weight:600; color:var(--text-dark); cursor:pointer; text-align:left; transition:all 0.2s; }
+  .trivia-option:hover  { border-color:var(--sky-blue); background:#EEF7FC; }
+  .trivia-option.correct{ background:#DFF2E4; border-color:var(--soft-green); color:#2D6B40; }
+  .trivia-option.wrong  { background:#F9E0E6; border-color:var(--rose); color:#8B3A4A; }
+  .memory-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; max-width:300px; margin:0 auto; }
+  .mem-card { aspect-ratio:1; border-radius:10px; background:var(--warm-orange); border:none; font-size:22px; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; justify-content:center; }
+  .mem-card.flipped { background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+  .mem-card.matched { background:#DFF2E4; cursor:default; }
+  .scramble-word { font-size:30px; font-weight:800; letter-spacing:6px; text-align:center; color:var(--warm-orange); margin:8px 0; }
+  .game-score { text-align:center; font-size:14px; font-weight:800; color:var(--text-mid); margin-top:9px; }
+  .game-btn { background:var(--warm-orange); color:white; border:none; border-radius:12px; padding:10px 18px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:800; cursor:pointer; margin-top:9px; transition:all 0.2s; }
+  .game-btn.green  { background:var(--soft-green); }
+  .game-btn.blue   { background:var(--sky-blue); }
+  .game-btn.purple { background:var(--lavender); }
+  .game-btn.teal   { background:var(--teal); }
+  .game-btn.gold   { background:var(--gold); color:#5a3e00; }
+  .math-display { font-size:32px; font-weight:800; text-align:center; color:var(--text-dark); margin:10px 0; }
+  .math-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .math-opt { padding:14px; border:2px solid #E8D5C4; border-radius:12px; background:white; font-family:'Nunito',sans-serif; font-size:18px; font-weight:800; cursor:pointer; text-align:center; transition:all 0.2s; }
+  .math-opt.correct{ background:#DFF2E4; border-color:var(--soft-green); }
+  .math-opt.wrong  { background:#F9E0E6; border-color:var(--rose); }
+  .spelling-hint { font-size:15px; font-weight:700; color:var(--text-mid); text-align:center; margin-bottom:8px; }
+  .word-blanks { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+  .blank-box { width:36px; height:42px; border-bottom:3px solid var(--warm-orange); display:flex; align-items:flex-end; justify-content:center; font-size:22px; font-weight:800; color:var(--text-dark); padding-bottom:4px; }
+  .letter-bank { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:12px 0; }
+  .letter-tile { width:38px; height:38px; border-radius:8px; border:2px solid #E8D5C4; background:white; font-family:'Nunito',sans-serif; font-size:17px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+  .letter-tile:hover { border-color:var(--warm-orange); background:#FDE8D8; }
+  .letter-tile.used { opacity:0.3; cursor:default; }
+
+  /* ALARM OVERLAY */
+  .alarm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; }
+  .alarm-overlay.show { display:flex; }
+  .alarm-box { background:white; border-radius:24px; padding:32px 28px; text-align:center; max-width:340px; margin:20px; animation:alarmPop 0.4s ease; box-shadow:0 8px 40px rgba(0,0,0,0.3); }
+  @keyframes alarmPop { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+  .alarm-icon { font-size:64px; margin-bottom:12px; }
+  .alarm-title { font-family:'Lora',serif; font-size:22px; font-weight:600; color:var(--text-dark); margin-bottom:8px; }
+  .alarm-detail { font-size:15px; color:var(--text-mid); margin-bottom:20px; }
+  .alarm-dismiss { background:var(--warm-orange); color:white; border:none; border-radius:14px; padding:14px 32px; font-family:'Nunito',sans-serif; font-size:18px; font-weight:800; cursor:pointer; width:100%; }
+
+
+  /* PASSWORD */
+  .pw-item { background:white; border-radius:14px; padding:14px 16px; margin-bottom:9px; box-shadow:0 2px 10px rgba(100,60,30,0.08); }
+  .pw-site  { font-size:16px; font-weight:800; color:var(--text-dark); }
+  .pw-user  { font-size:13px; color:var(--text-mid); margin-top:2px; }
+  .pw-pass-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .pw-pass-val { font-size:14px; font-family:monospace; background:#F5F0EB; border-radius:8px; padding:5px 10px; flex:1; letter-spacing:2px; color:var(--text-dark); word-break:break-all; }
+  .pw-reveal-btn { background:none; border:none; font-size:18px; cursor:pointer; padding:2px 4px; }
+  .pw-copy-btn { background:var(--sky-blue); color:white; border:none; border-radius:8px; padding:5px 11px; font-family:'Nunito',sans-serif; font-size:12px; font-weight:700; cursor:pointer; }
+  .pw-actions { display:flex; gap:6px; margin-top:8px; align-items:center; }
+
+  /* WORD SORT */
+  .wordsort-word { display:inline-block; margin:5px; padding:10px 16px; border:2px solid #E8D5C4; border-radius:12px; background:white; font-family:'Nunito',sans-serif; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .wordsort-word.selected { background:var(--sky-blue); color:white; border-color:var(--sky-blue); }
+  .wordsort-word.correct  { background:#DFF2E4; border-color:var(--soft-green); color:#2D6B40; }
+  .wordsort-word.wrong    { background:#F9E0E6; border-color:var(--rose); color:#8B3A4A; }
+  .wordsort-word.missed   { background:#FDE8D8; border-color:var(--warm-orange); color:#8B3A4A; }
+
+  /* TRUE/FALSE */
+  .tf-statement { font-size:17px; font-weight:700; color:var(--text-dark); text-align:center; line-height:1.5; margin-bottom:16px; }
+  .tf-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tf-btn { padding:16px; border:2px solid #E8D5C4; border-radius:14px; background:white; font-family:'Nunito',sans-serif; font-size:18px; font-weight:800; cursor:pointer; text-align:center; transition:all 0.2s; }
+  .tf-btn.correct { background:#DFF2E4; border-color:var(--soft-green); }
+  .tf-btn.wrong   { background:#F9E0E6; border-color:var(--rose); }
+
+  /* SEQUENCE */
+  .seq-display { font-size:24px; font-weight:800; text-align:center; letter-spacing:4px; color:var(--text-dark); margin:8px 0 14px; }
+  .seq-options { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .seq-opt { padding:14px; border:2px solid #E8D5C4; border-radius:12px; background:white; font-family:'Nunito',sans-serif; font-size:20px; font-weight:800; cursor:pointer; text-align:center; transition:all 0.2s; }
+  .seq-opt.correct { background:#DFF2E4; border-color:var(--soft-green); }
+  .seq-opt.wrong   { background:#F9E0E6; border-color:var(--rose); }
+
+
+  /* PIN LOCK */
+  .pin-overlay { display:none; position:absolute; inset:0; background:var(--cream); z-index:100; border-radius:var(--radius); padding:28px 20px; text-align:center; min-height:400px; }
+  .pin-overlay.show { display:block; }
+  .pin-title { font-family:'Lora',serif; font-size:22px; font-weight:600; color:var(--text-dark); margin-bottom:6px; }
+  .pin-sub { font-size:14px; color:var(--text-mid); margin-bottom:24px; }
+  .pin-dots { display:flex; justify-content:center; gap:14px; margin-bottom:24px; }
+  .pin-dot { width:18px; height:18px; border-radius:50%; background:#E8D5C4; transition:all 0.2s; }
+  .pin-dot.filled { background:var(--warm-orange); transform:scale(1.1); }
+  .pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:260px; margin:0 auto; }
+  .pin-key { padding:18px 10px; border:2px solid #E8D5C4; border-radius:14px; background:white; font-family:'Nunito',sans-serif; font-size:22px; font-weight:800; color:var(--text-dark); cursor:pointer; transition:all 0.15s; box-shadow:0 2px 8px rgba(100,60,30,0.08); }
+  .pin-key:active { transform:scale(0.94); background:#FDE8D8; }
+  .pin-key.wide { grid-column:span 2; }
+  .pin-error { color:var(--rose); font-size:14px; font-weight:700; margin-top:12px; min-height:20px; }
+  .pin-lock-icon { font-size:52px; margin-bottom:12px; }
+  .pin-change-link { color:var(--sky-blue); font-size:13px; font-weight:700; cursor:pointer; text-decoration:underline; margin-top:16px; display:inline-block; }
+
+  /* DIFFICULTY */
+  .difficulty-bar { display:flex; gap:8px; margin-bottom:10px; }
+  .diff-btn { flex:1; padding:11px 6px; border:2px solid #E8D5C4; border-radius:12px; background:white; font-family:'Nunito',sans-serif; font-size:14px; font-weight:800; color:var(--text-mid); cursor:pointer; transition:all 0.2s; text-align:center; }
+  .diff-btn.active { background:var(--warm-orange); color:white; border-color:var(--warm-orange); box-shadow:0 3px 12px rgba(232,132,90,0.35); }
+  .diff-desc { font-size:13px; color:var(--text-mid); margin-bottom:14px; text-align:center; font-style:italic; }
+  .diff-easy, .diff-medium, .diff-hard { display:none; }
+  .diff-easy.show, .diff-medium.show, .diff-hard.show { display:block; }
+
+  /* FACTS */
+  .fact-card { background:linear-gradient(135deg,#EEF7FF,#DCF0FF); border-radius:14px; padding:18px; font-size:16px; line-height:1.6; color:var(--text-dark); font-weight:600; text-align:center; margin-bottom:8px; }
+  .fact-source { font-size:12px; color:var(--text-mid); text-align:center; }
+
+  /* CROSSWORD */
+  .cw-grid { display:inline-grid; gap:3px; margin:10px auto; }
+  .cw-wrap { position:relative; width:40px; height:40px; display:inline-block; }
+  .cw-cell { position:absolute; inset:0; width:100%; height:100%; border:2px solid #C8B8A8; border-radius:6px; background:white; font-family:'Nunito',sans-serif; font-size:17px; font-weight:800; text-align:center; text-transform:uppercase; color:var(--text-dark); padding:0; outline:none; caret-color:var(--warm-orange); box-sizing:border-box; }
+  .cw-cell:focus { border-color:var(--warm-orange); background:#FFF5EF; }
+  .cw-cell.correct { background:#DFF2E4; border-color:var(--soft-green); color:#2D6B40; }
+  .cw-cell.wrong { background:#F9E0E6; border-color:var(--rose); }
+  .cw-black { width:40px; height:40px; background:#444; border-radius:6px; display:inline-block; }
+  .cw-cellnum { position:absolute; top:2px; left:3px; font-size:9px; font-weight:800; color:#888; line-height:1; pointer-events:none; z-index:2; }
+  .cw-timer { font-size:22px; font-weight:800; text-align:center; color:var(--warm-orange); margin-bottom:8px; font-family:'Nunito',sans-serif; }
+  .cw-clues { margin-top:12px; text-align:left; }
+  .cw-clue-head { font-size:14px; font-weight:800; color:var(--text-dark); margin:10px 0 4px; }
+  .cw-clue { font-size:13px; color:var(--text-mid); margin-bottom:3px; }
+  .cw-check-btn { background:var(--warm-orange); color:white; border:none; border-radius:12px; padding:11px 20px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:800; cursor:pointer; margin-top:12px; }
+  .empty { text-align:center; padding:28px 18px; color:var(--text-mid); font-size:15px; }
+  .empty .empty-icon { font-size:44px; margin-bottom:9px; }
+  /* EDIT BUTTON */
+  .edit-btn { background:none; border:none; font-size:16px; cursor:pointer; padding:0 4px; color:#BBB; margin-left:2px; }
+  .edit-btn:hover { color:var(--sky-blue); }
+
+  /* EDIT MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:8888; align-items:flex-end; justify-content:center; }
+  .modal-overlay.show { display:flex; }
+  .modal-box { background:white; border-radius:24px 24px 0 0; padding:24px 20px 36px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; animation:slideUp 0.3s ease; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-title { font-family:'Lora',serif; font-size:20px; font-weight:600; margin-bottom:16px; color:var(--text-dark); display:flex; justify-content:space-between; align-items:center; }
+  .modal-close { background:none; border:none; font-size:24px; cursor:pointer; color:#BBB; padding:0; }
+  .modal-save { background:var(--warm-orange); color:white; border:none; border-radius:14px; padding:13px 20px; font-family:'Nunito',sans-serif; font-size:16px; font-weight:800; cursor:pointer; width:100%; margin-top:14px; }
+
+
+  /* GROCERY PICKER */
+  .groc-cat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:4px; }
+  .groc-cat-btn { background:white; border:2px solid #E8D5C4; border-radius:16px; padding:14px 10px; text-align:center; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:800; font-size:14px; color:var(--text-dark); transition:all 0.18s; line-height:1.3; }
+  .groc-cat-btn:hover, .groc-cat-btn.last-used { border-color:var(--gold); background:#FFFBF0; }
+  .groc-cat-btn .cat-emoji { font-size:26px; display:block; margin-bottom:4px; }
+  .groc-cat-btn .cat-label { font-size:13px; }
+  .groc-items-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .groc-item-chip { display:inline-flex; align-items:center; gap:6px; background:white; border:2px solid #E8D5C4; border-radius:22px; padding:8px 14px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; color:var(--text-dark); cursor:pointer; transition:all 0.15s; }
+  .groc-item-chip:hover { background:var(--gold); border-color:var(--gold); color:#5a3e00; }
+  .groc-item-chip.in-list { background:#DFF2E4; border-color:var(--soft-green); color:#2D6B40; }
+  .groc-item-chip.in-list::after { content:'✓'; font-size:12px; }
+</style>
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Nudge">
+</head>
+<body>
+
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal" onclick="closeEditModal(event)">
+  <div class="modal-box">
+    <div class="modal-title"><span id="modal-title-text">Edit</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="modal-body"></div>
+    <button class="modal-save" id="modal-save-btn">💾 Save Changes</button>
+  </div>
+</div>
+
+<!-- ALARM OVERLAY -->
+<div class="alarm-overlay" id="alarm-overlay">
+  <div class="alarm-box">
+    <div class="alarm-icon" id="alarm-icon">⏰</div>
+    <div class="alarm-title" id="alarm-title">Reminder!</div>
+    <div class="alarm-detail" id="alarm-detail"></div>
+    <button class="alarm-dismiss" onclick="dismissAlarm()">✓ Got it!</button>
+  </div>
+</div>
+
+<div class="header">
+  <h1>👋 Nudge</h1>
+  <div class="date" id="todayDate"></div>
+</div>
+
+<div class="nav-wrap">
+<nav class="nav">
+  <button class="nav-btn active" onclick="showSection('home')" id="tab-home"><span class="icon">🏠</span>Today</button>
+  <button class="nav-btn" onclick="showSection('reminders')" id="tab-reminders"><span class="icon">⏰</span>Reminders</button>
+  <button class="nav-btn" onclick="showSection('appointments')" id="tab-appointments"><span class="icon">🏥</span>Appts</button>
+  <button class="nav-btn" onclick="showSection('notes')" id="tab-notes"><span class="icon">📝</span>Notes</button>
+  <button class="nav-btn" onclick="showSection('games')" id="tab-games"><span class="icon">🧩</span>Games</button>
+  <button class="nav-btn" onclick="showSection('grocery')" id="tab-grocery"><span class="icon">🛒</span>Grocery</button>
+  <button class="nav-btn" onclick="showSection('birthdays')" id="tab-birthdays"><span class="icon">🎉</span>Events</button>
+  <button class="nav-btn" onclick="showSection('passwords')" id="tab-passwords"><span class="icon">🔑</span>Passwords</button>
+  <button class="nav-btn" onclick="showSection('meds')" id="tab-meds"><span class="icon">💊</span>Meds</button>
+  <button class="nav-btn" onclick="showSection('contacts')" id="tab-contacts"><span class="icon">🆘</span>Contacts</button>
+</nav>
+</div>
+
+<!-- HOME -->
+<div class="section active" id="section-home">
+  <div class="home-greeting" id="home-greeting">Good morning! 🌤️</div>
+  <div class="home-sub">Here's your day at a glance.</div>
+  <div id="home-appts-section"></div>
+  <div id="home-meds-section"></div>
+  <div id="home-reminders-section"></div>
+  <div id="home-birthdays-section"></div>
+  <div id="home-empty"></div>
+</div>
+
+<!-- EVENTS -->
+<div class="section" id="section-birthdays">
+  <p class="section-header">🎉 Events & Special Dates</p>
+  <div id="birthday-alerts"></div>
+  <div class="card blue">
+    <div class="card-title">Add a Special Date</div>
+    <label>Person's Name</label>
+    <div class="input-row"><div><input type="text" id="bday-name" placeholder="e.g. Grandma Rose"></div><button class="btn btn-mic" onclick="startVoice('bday-name')" id="mic-bday-name">🎤</button></div>
+    <label>Type</label>
+    <select id="bday-type">
+      <option value="🎂 Birthday">🎂 Birthday</option>
+      <option value="💍 Anniversary">💍 Anniversary</option>
+      <option value="⭐ Special Day">⭐ Special Day</option>
+    </select>
+    <label>Date</label>
+    <input type="date" id="bday-date">
+    <button class="btn btn-primary" style="background:var(--sky-blue)" onclick="addBirthday()">➕ Add Date</button>
+  </div>
+  <div id="birthday-list"></div>
+</div>
+
+<!-- NOTES -->
+<div class="section" id="section-notes">
+  <p class="section-header">📝 My Notes</p>
+  <div class="card purple">
+    <div class="card-title">Add a Note</div>
+    <label>What's on your mind?</label>
+    <div class="input-row"><div><textarea id="note-text" placeholder="Type or tap the microphone to speak..."></textarea></div><button class="btn btn-mic" onclick="startVoice('note-text')" id="mic-note-text" style="height:80px;align-self:stretch;">🎤</button></div>
+    <button class="btn btn-primary" style="background:var(--lavender)" onclick="addNote()">💾 Save Note</button>
+  </div>
+  <div id="note-list"></div>
+</div>
+
+<!-- REMINDERS -->
+<div class="section" id="section-reminders">
+  <p class="section-header">⏰ My Reminders</p>
+  <div id="reminder-alerts"></div>
+  <div class="card teal">
+    <div class="card-title">Add a Reminder</div>
+    <label>What do you need to remember?</label>
+    <div class="input-row"><div><input type="text" id="rem-title" placeholder="e.g. Call the pharmacy"></div><button class="btn btn-mic" onclick="startVoice('rem-title')" id="mic-rem-title">🎤</button></div>
+    <label>Date</label><input type="date" id="rem-date">
+    <label>Time (optional — set for an alarm)</label><input type="time" id="rem-time">
+    <label>Repeat</label>
+    <select id="rem-repeat" onchange="updateRepeatUI('rem')">
+      <option value="None">No repeat — just once</option>
+      <option value="Daily">Every day</option>
+      <option value="Weekly">Every week (same day)</option>
+      <option value="Monthly">Every month (same date)</option>
+      <option value="Interval">Every ___ days</option>
+      <option value="Weekdays">Specific days of the week</option>
+    </select>
+    <div id="rem-repeat-extra" style="display:none;margin-top:8px"></div>
+    <button class="btn btn-primary" style="background:var(--teal)" onclick="addReminder()">⏰ Add Reminder</button>
+  </div>
+  <div id="reminder-list"></div>
+</div>
+
+<!-- APPOINTMENTS -->
+<div class="section" id="section-appointments">
+  <p class="section-header">🏥 My Appointments</p>
+  <div id="appt-alerts"></div>
+  <div class="card" style="border-left-color:#F4A261">
+    <div class="card-title">Add an Appointment</div>
+    <label>What is it for?</label>
+    <select id="appt-reason-select" onchange="toggleApptCustomReason()">
+      <option value="">— Choose a reason —</option>
+      <option>🩺 Family Doctor</option><option>🦷 Dentist</option>
+      <option>👁️ Eye Doctor / Optometrist</option><option>🦴 Physiotherapy</option>
+      <option>❤️ Heart / Cardiologist</option><option>🧠 Neurologist</option>
+      <option>🩻 X-Ray / Imaging</option><option>🔬 Blood Work / Lab</option>
+      <option>💊 Pharmacy Pickup</option><option>🧘 Massage / Chiropractor</option>
+      <option>🏥 Hospital Visit</option><option>🚑 Specialist</option>
+      <option>👨‍👩‍👧 Family Visit</option>
+      <option>✏️ Other — I'll type it</option>
+    </select>
+    <div id="appt-custom-reason-wrap" style="display:none;margin-top:8px">
+      <div class="input-row"><div><input type="text" id="appt-title" placeholder="Describe your appointment"></div><button class="btn btn-mic" onclick="startVoice('appt-title')" id="mic-appt-title">🎤</button></div>
+    </div>
+    <label>Doctor's Name (optional)</label>
+    <div class="input-row"><div><input type="text" id="appt-doctor" placeholder="e.g. Dr. Smith"></div><button class="btn btn-mic" onclick="startVoice('appt-doctor')" id="mic-appt-doctor">🎤</button></div>
+    <label>Location</label>
+    <select id="appt-location-select" onchange="toggleApptCustomLocation()">
+      <option value="">— Choose a place —</option>
+      <optgroup label="Type of Place">
+        <option>🏥 Hospital</option><option>🏢 Medical Clinic</option>
+        <option>🦷 Dental Office</option><option>👁️ Vision Centre</option>
+        <option>💊 Pharmacy</option><option>🏋️ Physio / Rehab Centre</option>
+        <option>🧪 Lab / Testing Centre</option><option>✏️ Other — I'll type it</option>
+      </optgroup>
+      <optgroup label="My Saved Places" id="saved-places-group"></optgroup>
+    </select>
+    <div id="appt-custom-location-wrap" style="display:none;margin-top:8px">
+      <div class="input-row"><div><input type="text" id="appt-location-custom" placeholder="e.g. Grey Nuns Hospital"></div><button class="btn btn-mic" onclick="startVoice('appt-location-custom')" id="mic-appt-location-custom">🎤</button></div>
+      <button class="btn" style="background:#EEE;color:var(--text-mid);font-size:13px;padding:9px 15px;margin-top:7px;width:100%;justify-content:center" onclick="saveLocation()">💾 Save this place for next time</button>
+    </div>
+    <label>Date</label><input type="date" id="appt-date">
+    <label>Time (set for an alarm)</label><input type="time" id="appt-time">
+    <label>Notes (optional)</label>
+    <div class="input-row"><div><input type="text" id="appt-notes" placeholder="e.g. Bring health card, fast beforehand"></div><button class="btn btn-mic" onclick="startVoice('appt-notes')" id="mic-appt-notes">🎤</button></div>
+    <button class="btn btn-primary" onclick="addAppt()">➕ Add Appointment</button>
+  </div>
+  <div id="appt-list"></div>
+</div>
+
+<!-- GROCERY LIST -->
+<div class="section" id="section-grocery">
+  <p class="section-header">🛒 Grocery List</p>
+
+  <!-- STEP 1: Pick a category -->
+  <div id="groc-step1">
+    <p style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:10px">Which section of the store?</p>
+    <div class="groc-cat-grid" id="groc-cat-grid"></div>
+  </div>
+
+  <!-- STEP 2: Pick items from that category -->
+  <div id="groc-step2" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <button onclick="grocBack()" style="background:#EEE;border:none;border-radius:10px;padding:8px 14px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;color:var(--text-mid)">&#8592; Back</button>
+      <div id="groc-cat-title" style="font-size:17px;font-weight:800;color:var(--text-dark)"></div>
+    </div>
+    <div class="groc-items-grid" id="groc-items-grid"></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:2px dashed #E8D5C4">
+      <p style="font-size:13px;font-weight:700;color:var(--text-mid);margin-bottom:8px">Or type your own:</p>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="groc-custom-item" placeholder="Type an item..."
+          onkeydown="if(event.key==='Enter')addGrocCustom()"
+          style="flex:1;padding:11px;border:2px solid #E8D5C4;border-radius:12px;font-family:'Nunito',sans-serif;font-size:15px;outline:none">
+        <input type="text" id="groc-custom-qty" placeholder="Qty"
+          style="width:70px;padding:11px;border:2px solid #E8D5C4;border-radius:12px;font-family:'Nunito',sans-serif;font-size:15px;outline:none;text-align:center">
+        <button onclick="addGrocCustom()" style="background:var(--gold);color:#5a3e00;border:none;border-radius:12px;padding:11px 16px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer">&#43;</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin:14px 0 10px;flex-wrap:wrap">
+    <button class="btn" style="background:var(--soft-green);color:white;font-size:13px;padding:9px 14px;margin-top:0" onclick="clearCheckedGrocery()">&#128465; Remove Checked</button>
+    <button class="btn" style="background:#EEE;color:var(--text-mid);font-size:13px;padding:9px 14px;margin-top:0" onclick="clearAllGrocery()">Clear All</button>
+  </div>
+  <div id="grocery-list"></div>
+</div>
+
+<!-- GAMES -->
+<div class="section" id="section-games">
+  <p class="section-header">🧩 Brain Games</p>
+
+  <!-- POSITIVITY NOTE -->
+  <div style="background:linear-gradient(135deg,#FFF5EF,#FFE8D6);border-radius:18px;padding:16px 18px;margin-bottom:14px;text-align:center;border:2px solid #F4C9A8">
+    <div id="daily-positivity" style="font-size:15px;font-weight:700;color:#8B4513;line-height:1.5"></div>
+  </div>
+
+
+
+  <p style="font-size:13px;font-weight:800;color:var(--text-mid);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px">🎮 Choose Your Game Level</p>
+  <!-- DIFFICULTY SELECTOR -->
+  <div class="difficulty-bar">
+    <button class="diff-btn active" id="diff-easy"   onclick="setDifficulty('easy')">🟢 Easy</button>
+    <button class="diff-btn"        id="diff-medium" onclick="setDifficulty('medium')">🟡 Medium</button>
+    <button class="diff-btn"        id="diff-hard"   onclick="setDifficulty('hard')">🔴 Hard</button>
+  </div>
+  <div class="diff-desc" id="diff-desc">Simple, relaxing games — great for a quick mental break.</div>
+
+  <!-- ═══ EASY GAMES ═══ -->
+  <!-- INTERESTING FACTS (Easy) -->
+  <div class="game-card diff-easy" style="border-left:5px solid var(--sky-blue)">
+    <div class="game-title">💡 Interesting Fact</div>
+    <div class="game-desc">Learn something new every day!</div>
+    <div class="game-area" id="facts-area"></div>
+    <button class="game-btn" style="background:var(--sky-blue);color:white" onclick="loadFact()">💡 Next Fact</button>
+  </div>
+
+  <!-- TRUE OR FALSE (Easy) -->
+  <div class="game-card diff-easy" style="border-left:5px solid var(--warm-orange)">
+    <div class="game-title">✅ True or False?</div>
+    <div class="game-desc">Is the statement true or false? Trust your gut!</div>
+    <div class="game-area" id="trufalse-area"></div>
+    <div class="game-score" id="trufalse-score"></div>
+  </div>
+
+  <!-- WORD SORT (Easy) -->
+  <div class="game-card diff-easy" style="border-left:5px solid var(--rose)">
+    <div class="game-title">🗂️ Word Sort</div>
+    <div class="game-desc">Tap all the words that belong to the category!</div>
+    <div class="game-area" id="wordsort-area"></div>
+    <div class="game-score" id="wordsort-score"></div>
+  </div>
+
+  <!-- MEMORY MATCH (Easy) -->
+  <div class="game-card diff-easy" style="border-left:5px solid var(--lavender)">
+    <div class="game-title">🃏 Memory Match</div>
+    <div class="game-desc">Flip cards and find the matching pairs! (4 pairs)</div>
+    <div class="game-area" id="memory-area"></div>
+    <div class="game-score" id="memory-score"></div>
+    <button class="game-btn purple" id="memory-new-btn" onclick="startMemory()" style="display:none">▶ New Game</button>
+  </div>
+
+  <!-- CROSSWORD EASY -->
+  <div class="game-card diff-easy" style="border-left:5px solid var(--warm-orange)">
+    <div class="game-title">📰 Easy Crossword</div>
+    <div class="game-desc">Short, simple words — perfect for a quick puzzle!</div>
+    <div class="game-area" id="crossword-easy-area"></div>
+    <div class="game-score" id="crossword-easy-score"></div>
+    <button class="game-btn" style="background:var(--warm-orange);color:white;display:none" id="crossword-easy-new-btn" onclick="startCrosswordEasy()">▶ New Puzzle</button>
+  </div>
+
+  <!-- MATH EASY -->
+  <div class="game-card diff-easy" style="border-left:5px solid var(--gold)">
+    <div class="game-title">🔢 Math Quiz</div>
+    <div class="game-desc">Simple addition and subtraction — tap the answer!</div>
+    <div class="game-area" id="math-area"></div>
+    <div class="game-score" id="math-score"></div>
+  </div>
+
+  <!-- ═══ MEDIUM GAMES ═══ -->
+  <!-- TRIVIA (Medium) -->
+  <div class="game-card diff-medium" style="border-left:5px solid var(--sky-blue)">
+    <div class="game-title">❓ Trivia</div>
+    <div class="game-desc">Test your knowledge — tap an answer to begin!</div>
+    <div class="game-area" id="trivia-area"></div>
+    <div class="game-score" id="trivia-score"></div>
+  </div>
+
+  <!-- WORD SCRAMBLE (Medium) -->
+  <div class="game-card diff-medium" style="border-left:5px solid var(--soft-green)">
+    <div class="game-title">🔤 Word Scramble</div>
+    <div class="game-desc">Unscramble the letters — type your answer!</div>
+    <div class="game-area" id="scramble-area"></div>
+    <button class="game-btn green" id="scramble-next-btn" onclick="startScramble()" style="display:none">▶ Next Word</button>
+  </div>
+
+  <!-- SPELL IT OUT (Medium) -->
+  <div class="game-card diff-medium" style="border-left:5px solid var(--teal)">
+    <div class="game-title">✏️ Spell It Out</div>
+    <div class="game-desc">Use the letter tiles to spell the word from the hint!</div>
+    <div class="game-area" id="spelling-area"></div>
+    <button class="game-btn teal" id="spelling-next-btn" onclick="startSpelling()" style="display:none">▶ Next Word</button>
+  </div>
+
+  <!-- NUMBER SEQUENCE (Medium) -->
+  <div class="game-card diff-medium" style="border-left:5px solid var(--lavender)">
+    <div class="game-title">🔢 What Comes Next?</div>
+    <div class="game-desc">Figure out the number pattern!</div>
+    <div class="game-area" id="sequence-area"></div>
+    <div class="game-score" id="sequence-score"></div>
+  </div>
+
+  <!-- CROSSWORD (Medium) -->
+  <div class="game-card diff-medium" style="border-left:5px solid var(--warm-orange)">
+    <div class="game-title">📰 Mini Crossword</div>
+    <div class="game-desc">Fill in the grid using the clues — 5 letters across and down!</div>
+    <div class="game-area" id="crossword-area"></div>
+    <div class="game-score" id="crossword-score"></div>
+    <button class="game-btn" style="background:var(--warm-orange);color:white;display:none" id="crossword-new-btn" onclick="startCrossword()">▶ New Puzzle</button>
+  </div>
+
+  <!-- ═══ HARD GAMES ═══ -->
+  <!-- TRIVIA HARD -->
+  <div class="game-card diff-hard" style="border-left:5px solid var(--sky-blue)">
+    <div class="game-title">🧠 Expert Trivia</div>
+    <div class="game-desc">Challenging questions — do you know your stuff?</div>
+    <div class="game-area" id="trivia-hard-area"></div>
+    <div class="game-score" id="trivia-hard-score"></div>
+  </div>
+
+  <!-- MATH HARD -->
+  <div class="game-card diff-hard" style="border-left:5px solid var(--gold)">
+    <div class="game-title">🔢 Math Challenge</div>
+    <div class="game-desc">Multiplication, division and multi-step problems!</div>
+    <div class="game-area" id="math-hard-area"></div>
+    <div class="game-score" id="math-hard-score"></div>
+  </div>
+
+  <!-- WORD SCRAMBLE HARD -->
+  <div class="game-card diff-hard" style="border-left:5px solid var(--soft-green)">
+    <div class="game-title">🔤 Word Scramble Pro</div>
+    <div class="game-desc">Long, tricky words — can you unscramble them?</div>
+    <div class="game-area" id="scramble-hard-area"></div>
+    <button class="game-btn green" id="scramble-hard-next-btn" onclick="startScrambleHard()" style="display:none">▶ Next Word</button>
+  </div>
+
+  <!-- CROSSWORD HARD -->
+  <div class="game-card diff-hard" style="border-left:5px solid var(--warm-orange)">
+    <div class="game-title">📰 Crossword Challenge</div>
+    <div class="game-desc">A larger grid with trickier clues — test your vocabulary!</div>
+    <div class="game-area" id="crossword-hard-area"></div>
+    <div class="game-score" id="crossword-hard-score"></div>
+    <button class="game-btn" style="background:var(--warm-orange);color:white;display:none" id="crossword-hard-new-btn" onclick="startCrosswordHard()">▶ New Puzzle</button>
+  </div>
+
+  <!-- MEMORY HARD (6 pairs) -->
+  <div class="game-card diff-hard" style="border-left:5px solid var(--lavender)">
+    <div class="game-title">🃏 Memory Master</div>
+    <div class="game-desc">Find all 6 matching pairs — a real memory workout!</div>
+    <div class="game-area" id="memory-hard-area"></div>
+    <div class="game-score" id="memory-hard-score"></div>
+    <button class="game-btn purple" id="memory-hard-new-btn" onclick="startMemoryHard()" style="display:none">▶ New Game</button>
+  </div>
+
+</div>
+
+
+<!-- PASSWORDS -->
+<div class="section" id="section-passwords" style="position:relative">
+
+  <!-- PIN OVERLAY -->
+  <div class="pin-overlay" id="pin-overlay">
+    <div id="pin-lock-icon" class="pin-lock-icon">🔒</div>
+    <div class="pin-title" id="pin-title">Enter Your PIN</div>
+    <div class="pin-sub" id="pin-sub">Enter your 4-digit PIN to view your passwords</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key" onclick="pinKey('back')">⌫</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key" onclick="pinKey('clear')">✕</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <span class="pin-change-link" id="pin-change-link" onclick="startChangePIN()" style="display:none">Change PIN</span>
+  </div>
+
+  <p class="section-header">🔑 Passwords & Logins</p>
+  <div class="alert-banner" style="background:linear-gradient(135deg,#FDE8D8,#FDDCBC);color:#B85C2A;margin-bottom:14px">
+    🔒 Only you can see this — it stays on your device
+  </div>
+  <div class="card" style="border-left-color:var(--gold)">
+    <div class="card-title">Save a Login</div>
+    <label>Website or App</label>
+    <div class="input-row"><div><input type="text" id="pw-site" placeholder="e.g. Facebook, Gmail, Netflix"></div><button class="btn btn-mic" onclick="startVoice('pw-site')" id="mic-pw-site">🎤</button></div>
+    <label>Username or Email</label>
+    <div class="input-row"><div><input type="text" id="pw-user" placeholder="e.g. joanna@gmail.com"></div><button class="btn btn-mic" onclick="startVoice('pw-user')" id="mic-pw-user">🎤</button></div>
+    <label>Password</label>
+    <div class="input-row" style="align-items:center">
+      <div style="flex:1;position:relative">
+        <input type="password" id="pw-pass" placeholder="Your password" style="padding-right:50px">
+        <button type="button" onclick="togglePwVis('pw-pass',this)"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer">👁️</button>
+      </div>
+      <button class="btn btn-mic" onclick="startVoice('pw-pass')" id="mic-pw-pass">🎤</button>
+    </div>
+    <label>Notes (optional)</label>
+    <input type="text" id="pw-notes" placeholder="e.g. Hint or account number">
+    <button class="btn btn-primary" style="background:var(--gold);color:#5a3e00" onclick="addPassword()">🔑 Save Login</button>
+  </div>
+  <div id="password-list"></div>
+</div>
+
+<!-- MEDICATIONS -->
+<div class="section" id="section-meds">
+  <p class="section-header">💊 My Medications</p>
+  <div id="med-alerts"></div>
+  <div class="card green">
+    <div class="card-title">Add a Medication</div>
+    <label>Medication Name</label>
+    <div class="input-row"><div><input type="text" id="med-name" placeholder="e.g. Aspirin"></div><button class="btn btn-mic" onclick="startVoice('med-name')" id="mic-med-name">🎤</button></div>
+    <label>Dosage</label>
+    <input type="text" id="med-dose" placeholder="e.g. 1 tablet, 5mg">
+    <label>Times Per Day</label>
+    <select id="med-freq" onchange="updateMedTimeInputs('med')">
+      <option value="1">Once a day</option>
+      <option value="2">Twice a day</option>
+      <option value="3">Three times a day</option>
+      <option value="4">Four times a day</option>
+      <option value="0">As needed</option>
+    </select>
+    <div id="med-time-inputs"></div>
+    <label>Notes (optional)</label>
+    <input type="text" id="med-notes" placeholder="e.g. Take with food">
+    <button class="btn btn-primary" style="background:var(--soft-green)" onclick="addMed()">➕ Add Medication</button>
+  </div>
+  <div id="med-list"></div>
+</div>
+
+<!-- CONTACTS -->
+<div class="section" id="section-contacts">
+  <p class="section-header">🆘 Emergency Contacts</p>
+  <div class="emergency-card">
+    <div style="font-family:'Lora',serif;font-size:15px;font-weight:600;color:#8B3A4A;margin-bottom:11px;">Tap a name to call</div>
+    <div id="contact-call-list"></div>
+  </div>
+  <div class="card rose">
+    <div class="card-title">Add a Contact</div>
+    <label>Choose an Avatar</label>
+    <div id="avatar-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px"><input type="hidden" id="contact-avatar" value="👩"></div>
+    <label>Name</label>
+    <div class="input-row"><div><input type="text" id="contact-name" placeholder="e.g. My Daughter Susan"></div><button class="btn btn-mic" onclick="startVoice('contact-name')" id="mic-contact-name">🎤</button></div>
+    <label>Phone Number</label>
+    <input type="tel" id="contact-phone" placeholder="e.g. 780-555-1234">
+    <label>Relationship</label>
+    <input type="text" id="contact-rel" placeholder="e.g. Daughter, Doctor, Neighbour">
+    <button class="btn btn-primary" style="background:var(--rose)" onclick="addContact()">➕ Add Contact</button>
+  </div>
+  <div id="contact-list"></div>
+</div>
+
+<script>
+// ===== DATA =====
+let data = JSON.parse(localStorage.getItem('nudgeApp') || '{}');
+['meds','birthdays','notes','contacts','reminders','appointments','grocery','passwords'].forEach(k => { if(!data[k]) data[k]=[]; });
+if (!data.medTaken)      data.medTaken      = {};
+if (!data.savedLocations)data.savedLocations= [];
+const _td = new Date(); const todayKey = _td.getFullYear() + '-' + String(_td.getMonth()+1).padStart(2,'0') + '-' + String(_td.getDate()).padStart(2,'0');
+Object.keys(data.medTaken).forEach(k => { if(!k.endsWith(todayKey)) delete data.medTaken[k]; });
+
+function save() { localStorage.setItem('nudgeApp', JSON.stringify(data)); }
+
+// ===== DATE & GREETING =====
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const now    = new Date();
+document.getElementById('todayDate').textContent = DAYS[now.getDay()] + ', ' + MONTHS[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+const hour = now.getHours();
+document.getElementById('home-greeting').textContent = hour<12 ? 'Good morning! 🌤️' : hour<17 ? 'Good afternoon! ☀️' : 'Good evening! 🌙';
+
+// ===== NAVIGATION =====
+function showSection(id) {
+  // Lock passwords when navigating away
+  if(id !== 'passwords') lockPasswords();
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id === 'passwords') showPinOverlay();
+  render();
+}
+
+// ===== VOICE =====
+let recognition, activeMicField=null, activeMicBtn=null;
+function startVoice(fieldId) {
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ alert('Voice dictation needs Chrome or Safari.'); return; }
+  if(activeMicField===fieldId && recognition){ recognition.stop(); return; }
+  if(recognition) recognition.stop();
+  recognition=new SR(); recognition.lang='en-CA'; recognition.continuous=false; recognition.interimResults=false;
+  activeMicField=fieldId; activeMicBtn=document.getElementById('mic-'+fieldId);
+  if(activeMicBtn){ activeMicBtn.textContent='🔴'; activeMicBtn.classList.add('listening'); }
+  recognition.onresult=e=>{ const el=document.getElementById(fieldId); if(el) el.value+=(el.value?' ':'')+e.results[0][0].transcript; };
+  recognition.onend=()=>{ if(activeMicBtn){ activeMicBtn.textContent='🎤'; activeMicBtn.classList.remove('listening'); } activeMicField=null; activeMicBtn=null; };
+  recognition.onerror=()=>{ if(activeMicBtn){ activeMicBtn.textContent='🎤'; activeMicBtn.classList.remove('listening'); } };
+  recognition.start();
+}
+
+// ===== ALARM SYSTEM =====
+let alarmQueue = [];
+let alarmInterval = null;
+
+function startAlarmChecker() {
+  if(alarmInterval) clearInterval(alarmInterval);
+  alarmInterval = setInterval(checkAlarms, 30000); // check every 30s
+  checkAlarms(); // check immediately
+}
+
+function checkAlarms() {
+  const n = new Date();
+  const nowDateStr = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
+  const nowHH = n.getHours().toString().padStart(2,'0');
+  const nowMM = n.getMinutes().toString().padStart(2,'0');
+  const nowTime = nowHH + ':' + nowMM;
+
+  // Check reminders
+  data.reminders.forEach(r => {
+    if(r.done || !r.time || !r.date) return;
+    const key = 'alarm_rem_' + r.id + '_' + nowDateStr;
+    if(localStorage.getItem(key)) return;
+    if(r.date === nowDateStr && r.time.slice(0,5) === nowTime) {
+      localStorage.setItem(key, '1');
+      triggerAlarm('⏰', r.title, 'Reminder', r.time);
+    }
+  });
+
+  // Check appointments
+  data.appointments.forEach(a => {
+    if(!a.time || !a.date) return;
+    const key = 'alarm_appt_' + a.id + '_' + nowDateStr;
+    if(localStorage.getItem(key)) return;
+    if(a.date === nowDateStr && a.time.slice(0,5) === nowTime) {
+      localStorage.setItem(key, '1');
+      triggerAlarm('🏥', a.title, a.doctor ? 'With ' + a.doctor : 'Appointment', a.time);
+    }
+  });
+}
+
+function requestNotifyPermission() {
+  if("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function triggerAlarm(icon, title, detail, time) {
+  alarmQueue.push({icon, title, detail, time});
+  if(alarmQueue.length === 1) showNextAlarm();
+  const body = detail + (time ? " at " + formatTime(time) : "");
+  // Send real push notification (works in background on iPhone)
+  sendPushNotification(icon + ' ' + title, body);
+  // Also try direct browser notification if app is open
+  if("Notification" in window && Notification.permission === "granted") {
+    new Notification(icon + " " + title, { body, vibrate:[200,100,200], requireInteraction:true });
+  }
+}
+
+function showNextAlarm() {
+  if(alarmQueue.length === 0) return;
+  const alarm = alarmQueue[0];
+  document.getElementById('alarm-icon').textContent  = alarm.icon;
+  document.getElementById('alarm-title').textContent  = alarm.title;
+  document.getElementById('alarm-detail').textContent = alarm.detail + (alarm.time ? ' at ' + formatTime(alarm.time) : '');
+  document.getElementById('alarm-overlay').classList.add('show');
+  // Try to play a beep
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.4,0.8].forEach(t => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.4, ctx.currentTime+t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+t+0.3);
+      osc.start(ctx.currentTime+t); osc.stop(ctx.currentTime+t+0.3);
+    });
+  } catch(e) {}
+}
+
+function dismissAlarm() {
+  document.getElementById('alarm-overlay').classList.remove('show');
+  alarmQueue.shift();
+  if(alarmQueue.length > 0) setTimeout(showNextAlarm, 500);
+}
+
+function formatTime(t) {
+  if(!t) return '';
+  const [h,m] = t.split(':');
+  const hr = parseInt(h);
+  return (hr%12||12) + ':' + m + ' ' + (hr<12?'AM':'PM');
+}
+
+// ===== MEDICATIONS =====
+
+// ===== MED TIME INPUTS =====
+const DEFAULT_TIMES = [
+  ['8:00'],
+  ['8:00','20:00'],
+  ['8:00','13:00','20:00'],
+  ['8:00','12:00','16:00','20:00']
+];
+const DOSE_LABELS = ['Morning','Evening','Noon','Afternoon'];
+const DOSE_NAMES  = [
+  ['Morning'],
+  ['Morning','Evening'],
+  ['Morning','Noon','Evening'],
+  ['Morning','Noon','Afternoon','Evening']
+];
+
+function updateMedTimeInputs(prefix) {
+  const freqEl = document.getElementById(prefix + '-freq');
+  const wrap   = document.getElementById(prefix + '-time-inputs');
+  if(!freqEl || !wrap) return;
+  const count = parseInt(freqEl.value) || 0;
+  if(count === 0) { wrap.innerHTML = ''; return; }
+
+  const defaults = DEFAULT_TIMES[count-1] || [];
+  const names    = DOSE_NAMES[count-1]    || [];
+  wrap.innerHTML = Array.from({length:count}, (_,i) => `
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+      <label style="min-width:90px;margin:0;font-size:14px;font-weight:700;color:var(--text-mid)">
+        ${count === 1 ? 'Time' : 'Dose '+(i+1)}
+      </label>
+      <input type="time" id="${prefix}-time-${i}"
+        value="${defaults[i]||''}"
+        style="flex:1;padding:11px 13px;border:2px solid #E8D5C4;border-radius:12px;
+               font-family:'Nunito',sans-serif;font-size:16px">
+    </div>
+  `).join('');
+}
+
+function getMedTimesFromInputs(prefix, count) {
+  const doseLabels = [];
+  const doseTimes  = [];
+  const names = DOSE_NAMES[count-1] || [];
+  for(let i=0; i<count; i++) {
+    const timeEl = document.getElementById(prefix + '-time-' + i);
+    const timeVal = timeEl ? timeEl.value : '';
+    doseTimes.push(timeVal);
+    if(timeVal) {
+      // Format time nicely as label e.g. "8:00 AM"
+      doseLabels.push((names[i]||'Dose '+(i+1)) + (timeVal ? ' · ' + formatTime(timeVal) : ''));
+    } else {
+      doseLabels.push(names[i] || 'Dose '+(i+1));
+    }
+  }
+  return { doseLabels, doseTimes };
+}
+
+function populateMedTimeInputs(prefix, m) {
+  // Called when editing — pre-fill with saved times
+  updateMedTimeInputs(prefix);
+  const count = parseInt(m.freq) || 0;
+  for(let i=0; i<count; i++) {
+    const el = document.getElementById(prefix + '-time-' + i);
+    if(el && m.doseTimes && m.doseTimes[i]) el.value = m.doseTimes[i];
+  }
+}
+
+function getMedDoseLabels(m) {
+  if(m.doseLabels && m.doseLabels.length>0) return m.doseLabels;
+  if(typeof m.freq==='string') {
+    const f=m.freq.toLowerCase();
+    if(f.includes('twice')||f==='2') return ['Morning','Evening'];
+    if(f.includes('three')||f==='3') return ['Morning','Afternoon','Evening'];
+    if(f.includes('four')||f==='4')  return ['Morning','Noon','Afternoon','Evening'];
+    if(f.includes('as needed'))      return ['As needed'];
+    return [m.freq];
+  }
+  const count=parseInt(m.freq);
+  if(!count||count===0) return ['As needed'];
+  const defaults=[['Morning'],['Morning','Evening'],['Morning','Afternoon','Evening'],['Morning','Noon','Afternoon','Evening']];
+  return defaults[count-1]||Array.from({length:count},(_,i)=>'Dose '+(i+1));
+}
+
+function addMed() {
+  const name = document.getElementById('med-name').value.trim();
+  if(!name){ alert('Please enter a medication name.'); return; }
+  const count = parseInt(document.getElementById('med-freq').value) || 0;
+  const { doseLabels, doseTimes } = getMedTimesFromInputs('med', count);
+  data.meds.push({
+    id: Date.now(),
+    name,
+    dose:       document.getElementById('med-dose').value.trim(),
+    freq:       count,
+    doseLabels,
+    doseTimes,
+    notes:      document.getElementById('med-notes').value.trim()
+  });
+  save();
+  ['med-name','med-dose','med-notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('med-freq').value = '1';
+  updateMedTimeInputs('med');
+  render();
+}
+
+function deleteMed(id) {
+  if(confirm('Remove this medication?')){ data.meds=data.meds.filter(m=>m.id!==id); save(); render(); }
+}
+
+function toggleMedTaken(medId,doseIndex) {
+  const key=medId+'_dose'+doseIndex+'_'+todayKey;
+  data.medTaken[key]=!data.medTaken[key];
+  save(); render();
+}
+
+function renderMeds() {
+  const list=document.getElementById('med-list');
+  const alerts=document.getElementById('med-alerts');
+  if(!list) return;
+  if(data.meds.length===0){ list.innerHTML='<div class="empty"><div class="empty-icon">💊</div>No medications added yet.</div>'; alerts.innerHTML=''; return; }
+  alerts.innerHTML=`<div class="alert-banner">✅ You have ${data.meds.length} medication${data.meds.length>1?'s':''} tracked</div>`;
+  list.innerHTML=data.meds.map(m=>{
+    const labels=getMedDoseLabels(m);
+    const timeStr = m.doseTimes && m.doseTimes.some(t=>t)
+      ? m.doseTimes.map((t,i)=>t?formatTime(t):'Choose time').join(' · ')
+      : Array(m.freq||1).fill('Choose time').join(' · ');
+    return `<div class="item"><div class="item-content"><div class="item-name">${m.name}</div><div class="item-detail">${timeStr}${m.dose?' · '+m.dose:''}${m.notes?' · '+m.notes:''}</div></div><span class="item-badge badge-green">💊</span><button class="edit-btn" onclick="editMed(${m.id})">✏️</button><button class="delete-btn" onclick="deleteMed(${m.id})">✕</button></div>`;
+  }).join('');
+}
+
+// ===== BIRTHDAYS =====
+function daysUntil(dateStr) {
+  const today=new Date(); today.setHours(0,0,0,0);
+  const d=new Date(dateStr+'T00:00:00');
+  const next=new Date(today.getFullYear(),d.getMonth(),d.getDate());
+  if(next<today) next.setFullYear(today.getFullYear()+1);
+  return Math.round((next-today)/86400000);
+}
+
+function addBirthday() {
+  const name=document.getElementById('bday-name').value.trim();
+  const date=document.getElementById('bday-date').value;
+  if(!name||!date){ alert('Please enter a name and date.'); return; }
+  data.birthdays.push({id:Date.now(),name,type:document.getElementById('bday-type').value,date});
+  save(); document.getElementById('bday-name').value=''; document.getElementById('bday-date').value=''; render();
+}
+
+function deleteBirthday(id) {
+  if(confirm('Remove this date?')){ data.birthdays=data.birthdays.filter(b=>b.id!==id); save(); render(); }
+}
+
+function renderBirthdays() {
+  const list=document.getElementById('birthday-list');
+  const alerts=document.getElementById('birthday-alerts');
+  if(!list) return;
+  if(data.birthdays.length===0){ list.innerHTML='<div class="empty"><div class="empty-icon">🎂</div>No dates added yet.</div>'; alerts.innerHTML=''; return; }
+  const sorted=[...data.birthdays].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+  const soon=sorted.filter(b=>daysUntil(b.date)<=7);
+  alerts.innerHTML=soon.map(b=>{const d=daysUntil(b.date); return `<div class="alert-banner">🎉 ${b.name}'s ${b.type.replace(/[^\w ]/g,'')} is ${d===0?'TODAY!':'in '+d+' day'+(d>1?'s':'')+'!'}</div>`;}).join('');
+  list.innerHTML=sorted.map(b=>{
+    const d=daysUntil(b.date);
+    const date=new Date(b.date+'T00:00:00');
+    const tag=d===0?'<span class="upcoming-tag">🎉 TODAY!</span>':d<=7?`<span class="upcoming-tag">In ${d} days</span>`:'';
+    return `<div class="item"><div class="item-content"><div class="item-name">${b.name}</div><div class="item-detail">${b.type} · ${MONTHS[date.getMonth()]} ${date.getDate()}</div>${tag}</div><span class="item-badge badge-blue">${d===0?'🎉':'📅'}</span><button class="edit-btn" onclick="editBirthday(${b.id})">✏️</button><button class="delete-btn" onclick="deleteBirthday(${b.id})">✕</button></div>`;
+  }).join('');
+}
+
+// ===== NOTES =====
+function addNote() {
+  const text=document.getElementById('note-text').value.trim();
+  if(!text){ alert('Please write or speak a note first.'); return; }
+  const ts=new Date().toLocaleString('en-CA',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  data.notes.unshift({id:Date.now(),text,ts}); save(); document.getElementById('note-text').value=''; render();
+}
+
+function deleteNote(id) {
+  if(confirm('Delete this note?')){ data.notes=data.notes.filter(n=>n.id!==id); save(); render(); }
+}
+
+function renderNotes() {
+  const list=document.getElementById('note-list');
+  if(!list) return;
+  if(data.notes.length===0){ list.innerHTML='<div class="empty"><div class="empty-icon">📝</div>No notes yet.</div>'; return; }
+  list.innerHTML=data.notes.map(n=>`<div class="item"><div class="item-content"><div class="item-name" style="font-size:15px;font-weight:600">${n.text}</div><div class="item-detail">📅 ${n.ts}</div></div><button class="edit-btn" onclick="editNote(${n.id})">✏️</button><button class="delete-btn" onclick="deleteNote(${n.id})">✕</button></div>`).join('');
+}
+
+// ===== REMINDERS =====
+function addReminder() {
+  const title = document.getElementById('rem-title').value.trim();
+  const date  = document.getElementById('rem-date').value;
+  if(!title||!date){ alert('Please enter a reminder and a date.'); return; }
+  const repeatType = document.getElementById('rem-repeat').value;
+  const repeatData = getRepeatData('rem', repeatType);
+  data.reminders.push({id:Date.now(), title, date,
+    time:   document.getElementById('rem-time').value,
+    repeat: repeatType,
+    repeatData,
+    done:   false
+  });
+  save();
+  document.getElementById('rem-title').value='';
+  document.getElementById('rem-date').value='';
+  document.getElementById('rem-time').value='';
+  document.getElementById('rem-repeat').value='None';
+  updateRepeatUI('rem');
+  render();
+}
+
+function toggleReminder(id) {
+  const r = data.reminders.find(r => r.id === id);
+  if(!r) return;
+
+  if(r.repeat === 'None' || !r.repeat) {
+    // One-time reminder: just toggle done
+    r.done = !r.done;
+  } else {
+    // Repeating: advance to next occurrence instead of marking done
+    const current = new Date(r.date + 'T00:00:00');
+    let next = new Date(current);
+    if(r.repeat === 'Daily')        next.setDate(next.getDate() + 1);
+    else if(r.repeat === 'Weekly')  next.setDate(next.getDate() + 7);
+    else if(r.repeat === 'Monthly') next.setMonth(next.getMonth() + 1);
+    r.date = next.toISOString().slice(0, 10);
+    r.done = false;
+    // Brief visual feedback
+    const el = document.querySelector(`[data-rem-id="\${id}"]`);
+    if(el){ el.style.opacity='0.4'; setTimeout(()=>{ el.style.opacity=''; }, 400); }
+  }
+  save(); render();
+}
+
+function deleteReminder(id) {
+  if(confirm('Delete this reminder?')){ data.reminders=data.reminders.filter(r=>r.id!==id); save(); render(); }
+}
+
+function renderReminders() {
+  const list=document.getElementById('reminder-list');
+  const alerts=document.getElementById('reminder-alerts');
+  if(!list) return;
+  if(data.reminders.length===0){ list.innerHTML='<div class="empty"><div class="empty-icon">⏰</div>No reminders yet.</div>'; alerts.innerHTML=''; return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const sorted=[...data.reminders].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const due=sorted.filter(r=>!r.done&&new Date(r.date+'T00:00:00')<=today);
+  alerts.innerHTML=due.length>0?`<div class="alert-banner" style="background:linear-gradient(135deg,#D4F2EF,#B8E8E4);color:#2E8A81;">⏰ ${due.length} reminder${due.length>1?'s':''} due today or overdue!</div>`:'';
+  list.innerHTML=sorted.map(r=>{
+    const rDate=new Date(r.date+'T00:00:00');
+    const formatted=MONTHS[rDate.getMonth()]+' '+rDate.getDate()+', '+rDate.getFullYear();
+    const isPast=!r.done&&rDate<=today;
+    const badge=r.done?'✅':isPast?'🔴':'⏰';
+    const badgeCls=r.done?'badge-green':isPast?'badge-rose':'badge-teal';
+    return `<div class="item" data-rem-id="${r.id}" style="${r.done?'opacity:0.5':''}"><div class="item-content"><div class="item-name" style="${r.done?'text-decoration:line-through':''}">${r.title}</div><div class="item-detail">📅 ${formatted}${r.time?' at '+formatTime(r.time):''}${repeatLabel(r)?(' · 🔁 '+repeatLabel(r)):''}</div></div><span class="item-badge ${badgeCls}" style="cursor:pointer" onclick="toggleReminder(${r.id})">${badge}</span><button class="edit-btn" onclick="editReminder(${r.id})">✏️</button><button class="delete-btn" onclick="deleteReminder(${r.id})">✕</button></div>`;
+  }).join('');
+}
+
+// ===== APPOINTMENTS =====
+function toggleApptCustomReason() {
+  document.getElementById('appt-custom-reason-wrap').style.display=document.getElementById('appt-reason-select').value==="✏️ Other — I'll type it"?'block':'none';
+}
+function toggleApptCustomLocation() {
+  document.getElementById('appt-custom-location-wrap').style.display=document.getElementById('appt-location-select').value==="✏️ Other — I'll type it"?'block':'none';
+}
+function saveLocation() {
+  const loc=document.getElementById('appt-location-custom').value.trim();
+  if(!loc){ alert('Please type a location name first.'); return; }
+  if(data.savedLocations.includes(loc)){ alert('Already saved!'); return; }
+  data.savedLocations.push(loc); save(); renderSavedPlaces();
+  document.getElementById('appt-location-select').value=loc;
+  document.getElementById('appt-custom-location-wrap').style.display='none';
+  alert('✅ "'+loc+'" saved for next time!');
+}
+function renderSavedPlaces() {
+  const g=document.getElementById('saved-places-group');
+  if(!g) return;
+  g.innerHTML=data.savedLocations.map(l=>`<option>${l}</option>`).join('');
+}
+function getApptTitle() {
+  const sel=document.getElementById('appt-reason-select').value;
+  if(!sel) return '';
+  if(sel==="✏️ Other — I'll type it") return document.getElementById('appt-title').value.trim();
+  return sel.replace(/^[\p{Emoji}\s]+/u,'').trim();
+}
+function getApptLocation() {
+  const sel=document.getElementById('appt-location-select').value;
+  if(!sel) return '';
+  if(sel==="✏️ Other — I'll type it") return document.getElementById('appt-location-custom').value.trim();
+  return sel.replace(/^[\p{Emoji}\s]+/u,'').trim();
+}
+function addAppt() {
+  const title=getApptTitle();
+  const date=document.getElementById('appt-date').value;
+  if(!title){ alert('Please choose or type what the appointment is for.'); return; }
+  if(!date){ alert('Please choose a date.'); return; }
+  data.appointments.push({id:Date.now(),title,doctor:document.getElementById('appt-doctor').value.trim(),location:getApptLocation(),date,time:document.getElementById('appt-time').value,notes:document.getElementById('appt-notes').value.trim()});
+  save();
+  document.getElementById('appt-reason-select').value='';
+  document.getElementById('appt-location-select').value='';
+  document.getElementById('appt-custom-reason-wrap').style.display='none';
+  document.getElementById('appt-custom-location-wrap').style.display='none';
+  ['appt-title','appt-doctor','appt-date','appt-time','appt-notes','appt-location-custom'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  render();
+}
+function deleteAppt(id) {
+  if(confirm('Remove this appointment?')){ data.appointments=data.appointments.filter(a=>a.id!==id); save(); render(); }
+}
+function renderAppts() {
+  const list=document.getElementById('appt-list');
+  const alerts=document.getElementById('appt-alerts');
+  if(!list) return;
+  if(data.appointments.length===0){ list.innerHTML='<div class="empty"><div class="empty-icon">🏥</div>No appointments yet.</div>'; alerts.innerHTML=''; return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const sorted=[...data.appointments].sort((a,b)=>new Date(a.date+'T'+(a.time||'00:00'))-new Date(b.date+'T'+(b.time||'00:00')));
+  const upcoming=sorted.filter(a=>new Date(a.date+'T00:00:00')>=today);
+  const past=sorted.filter(a=>new Date(a.date+'T00:00:00')<today);
+  const soon=upcoming.filter(a=>(new Date(a.date+'T00:00:00')-today)/86400000<=7);
+  alerts.innerHTML=soon.map(a=>{const diff=Math.round((new Date(a.date+'T00:00:00')-today)/86400000);const when=diff===0?'TODAY':diff===1?'TOMORROW':'in '+diff+' days';return `<div class="alert-banner" style="background:linear-gradient(135deg,#FDE8D8,#FDDCBC);color:#B85C2A;">🏥 ${a.title} is <strong>${when}</strong>${a.time?' at '+formatTime(a.time):''}</div>`;}).join('');
+  const renderItem=(a,isPast)=>{
+    const d=new Date(a.date+'T00:00:00');
+    const ds=MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+    return `<div class="item" style="${isPast?'opacity:0.55':''}"><div class="item-content"><div class="item-name">${a.title}</div>${a.doctor?`<div class="item-detail">👤 ${a.doctor}</div>`:''} ${a.location?`<div class="item-detail">📍 ${a.location}</div>`:''}<div class="item-detail">📅 ${ds}${a.time?' · '+formatTime(a.time):''}</div>${a.notes?`<div class="item-detail">📋 ${a.notes}</div>`:''}</div><button class="edit-btn" onclick="editAppt(${a.id})">✏️</button><button class="delete-btn" onclick="deleteAppt(${a.id})">✕</button></div>`;
+  };
+  let html='';
+  if(upcoming.length>0){ html+='<div class="home-section-title" style="margin-top:4px">Upcoming</div>'+upcoming.map(a=>renderItem(a,false)).join(''); }
+  if(past.length>0){ html+='<div class="home-section-title" style="margin-top:14px">Past</div>'+past.map(a=>renderItem(a,true)).join(''); }
+  list.innerHTML=html;
+}
+
+// ===== GROCERY =====
+// ===== GROCERY PICKER DATA =====
+const GROC_CATS = [
+  { key:'produce',  label:'Produce',          emoji:'🥦',
+    items:['Apples','Asparagus','Avocado','Bananas','Beets','Bell Peppers','Blueberries','Broccoli','Cabbage','Cantaloupe','Carrots','Cauliflower','Celery','Corn','Cucumber','Garlic','Grapes','Green Beans','Kale','Lemons','Lettuce','Limes','Mushrooms','Onions','Oranges','Peaches','Pears','Peas','Potatoes','Spinach','Strawberries','Sweet Potatoes','Tomatoes','Watermelon','Zucchini'] },
+  { key:'meat',     label:'Meat & Fish',       emoji:'🥩',
+    items:['Bacon','Beef Steak','Chicken Breasts','Chicken Thighs','Cod','Crab','Deli Meat','Ground Beef','Ground Turkey','Ham','Hot Dogs','Lamb Chops','Pork Chops','Salmon','Sardines','Sausages','Shrimp','Tilapia','Tuna (canned)','Turkey'] },
+  { key:'dairy',    label:'Dairy & Eggs',      emoji:'🥛',
+    items:['Almond Milk','Apple Juice','Butter','Cheddar Cheese','Cottage Cheese','Cream Cheese','Eggs','Feta','Greek Yogurt','Half & Half','Heavy Cream','Milk','Mozzarella','Oat Milk','Orange Juice','Parmesan','Sour Cream','Soy Milk','Whipping Cream','Yogurt'] },
+  { key:'bakery',   label:'Bread & Bakery',    emoji:'🍞',
+    items:['Bagels','Baguette','Buns','Crackers','Croissants','Dinner Rolls','English Muffins','Muffins','Pita Bread','Rye Bread','Ryvita','Sourdough','Tortillas','White Bread','Whole Wheat Bread'] },
+  { key:'pantry',   label:'Pantry & Canned',   emoji:'🥫',
+    items:['Beef Broth','Canned Beans','Canned Corn','Canned Peas','Canned Tomatoes','Cereal','Chicken Broth','Chickpeas','Coffee','Flour','Granola','Honey','Hot Chocolate','Jam','Lentils','Maple Syrup','Oatmeal','Olive Oil','Pasta','Peanut Butter','Pepper','Rice','Salt','Soy Sauce','Sugar','Tea','Tomato Sauce','Vegetable Oil','Vinegar'] },
+  { key:'frozen',   label:'Frozen Foods',      emoji:'❄️',
+    items:['Chicken Nuggets','Edamame','Fish Fillets','Frozen Berries','Frozen Broccoli','Frozen Corn','Frozen Fries','Frozen Meals','Frozen Mixed Veg','Frozen Peas','Frozen Pizza','Frozen Spinach','Frozen Waffles','Ice Cream'] },
+  { key:'snacks',   label:'Snacks & Sweets',   emoji:'🍭',
+    items:['Almonds','Cashews','Chips','Chocolate Bar','Cookies','Crackers','Digestive Biscuits','Dried Cranberries','Granola Bars','Gummies','Mixed Nuts','Popcorn','Pretzels','Raisins','Rice Cakes','Trail Mix'] },
+  { key:'personal', label:'Personal Care',     emoji:'🧴',
+    items:['Band-Aids','Body Wash','Conditioner','Cotton Balls','Deodorant','Floss','Hand Cream','Lip Balm','Moisturizer','Pain Reliever','Razor','Shampoo','Shaving Cream','Soap','Sunscreen','Tissues','Toothbrush','Toothpaste'] },
+  { key:'household',label:'Household',         emoji:'🧹',
+    items:['All-Purpose Cleaner','Aluminum Foil','Batteries','Bleach','Dish Soap','Dishwasher Pods','Dryer Sheets','Fabric Softener','Garbage Bags','Glass Cleaner','Laundry Detergent','Light Bulbs','Mop Refill','Paper Towels','Plastic Wrap','Sponges','Toilet Cleaner','Toilet Paper','Zip Lock Bags'] },
+  { key:'other',    label:'Other',             emoji:'🛒',
+    items:['Batteries','Birthday Card','Flowers','Gift Wrap','Light Bulbs','Stamps'] },
+];
+
+let grocCurrentCat = localStorage.getItem('nudge_last_groc_cat') || null;
+
+function initGroceryPicker() {
+  const grid = document.getElementById('groc-cat-grid');
+  if(!grid) return;
+  grid.innerHTML = GROC_CATS.map(cat => `
+    <button class="groc-cat-btn ${grocCurrentCat===cat.key ? 'last-used' : ''}"
+      onclick="grocPickCat('${cat.key}')">
+      <span class="cat-emoji">${cat.emoji}</span>
+      <span class="cat-label">${cat.label}</span>
+      ${grocCurrentCat===cat.key ? '<span style="font-size:10px;color:var(--gold);margin-top:2px">⭐ Last used</span>' : ''}
+    </button>`).join('');
+  // Do NOT auto-open last used category — let the Back button work correctly
+}
+
+function grocPickCat(key) {
+  grocCurrentCat = key;
+  localStorage.setItem('nudge_last_groc_cat', key);
+  const cat = GROC_CATS.find(c=>c.key===key);
+  if(!cat) return;
+
+  document.getElementById('groc-step1').style.display = 'none';
+  document.getElementById('groc-step2').style.display = 'block';
+  document.getElementById('groc-cat-title').textContent = cat.emoji + ' ' + cat.label;
+
+  renderGrocItemChips(cat);
+}
+
+function renderGrocItemChips(cat) {
+  const grid = document.getElementById('groc-items-grid');
+  if(!grid) return;
+  const inList = new Set(data.grocery.map(g=>g.item.toLowerCase()));
+  grid.innerHTML = cat.items.map(item => `
+    <button class="groc-item-chip ${inList.has(item.toLowerCase()) ? 'in-list' : ''}"
+      onclick="grocAddItem('${item.replace(/'/g,"\'")}')">
+      ${item}
+    </button>`).join('');
+}
+
+function grocAddItem(itemName) {
+  const cat = GROC_CATS.find(c=>c.key===grocCurrentCat);
+  const catLabel = cat ? cat.emoji + ' ' + cat.label : '🛒 Other';
+  // If already in list, remove it (toggle off)
+  const existing = data.grocery.find(g=>g.item.toLowerCase()===itemName.toLowerCase());
+  if(existing) {
+    data.grocery = data.grocery.filter(g=>g.id!==existing.id);
+  } else {
+    data.grocery.push({id:Date.now(), item:itemName, qty:'', cat:catLabel, checked:false});
+  }
+  save(); render();
+  // Re-render chips to update checkmarks
+  if(cat) renderGrocItemChips(cat);
+}
+
+function addGrocCustom() {
+  const inp = document.getElementById('groc-custom-item');
+  const qtyInp = document.getElementById('groc-custom-qty');
+  const item = inp ? inp.value.trim() : '';
+  if(!item) return;
+  const cat = GROC_CATS.find(c=>c.key===grocCurrentCat);
+  const catLabel = cat ? cat.emoji + ' ' + cat.label : '🛒 Other';
+  data.grocery.push({id:Date.now(), item, qty:qtyInp?qtyInp.value.trim():'', cat:catLabel, checked:false});
+  save(); render();
+  if(inp) inp.value='';
+  if(qtyInp) qtyInp.value='';
+  if(cat) renderGrocItemChips(cat);
+}
+
+function grocBack() {
+  document.getElementById('groc-step2').style.display = 'none';
+  document.getElementById('groc-step1').style.display = 'block';
+  initGroceryPicker();
+}
+
+// Keep old addGrocery as no-op (called nowhere now but safe to keep)
+function addGrocery() {}
+function toggleGrocery(id) {
+  const g=data.grocery.find(g=>g.id===id);
+  if(g){ g.checked=!g.checked; save(); render(); }
+}
+function deleteGrocery(id) {
+  data.grocery=data.grocery.filter(g=>g.id!==id); save(); render();
+}
+function clearCheckedGrocery() {
+  data.grocery=data.grocery.filter(g=>!g.checked); save(); render();
+}
+function clearAllGrocery() {
+  if(confirm('Clear the entire grocery list?')){ data.grocery=[]; save(); render(); }
+}
+function renderGrocery() {
+  const list=document.getElementById('grocery-list');
+  if(!list) return;
+  if(data.grocery.length===0){ list.innerHTML='<div class="empty"><div class="empty-icon">🛒</div>Your list is empty — add items above!</div>'; return; }
+  // Group by category
+  const cats={};
+  data.grocery.forEach(g=>{ if(!cats[g.cat]) cats[g.cat]=[]; cats[g.cat].push(g); });
+  list.innerHTML=Object.entries(cats).map(([cat,items])=>`
+    <div class="grocery-cat-header">${cat}</div>
+    ${items.map(g=>`
+      <div class="grocery-item ${g.checked?'checked':''}">
+        <div class="grocery-check" onclick="toggleGrocery(${g.id})">${g.checked?'✓':''}</div>
+        <div class="grocery-label">${g.item}</div>
+        ${g.qty?`<div class="grocery-qty">${g.qty}</div>`:''}
+        <button class="edit-btn" onclick="editGrocery(${g.id})">✏️</button><button class="delete-btn" style="margin-left:4px" onclick="deleteGrocery(${g.id})">✕</button>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+// ===== CONTACTS =====
+const AVATARS=['👩','👩‍🦳','👩‍🦱','👩‍🦰','👩‍🦲','👨','👨‍🦳','👨‍🦱','👨‍🦰','👨‍🦲','👵','👴','🧑','👩‍⚕️','👨‍⚕️','🧑‍⚕️','👩‍🦽','👨‍🦽','🐕','🐱'];
+function initAvatarPicker() {
+  const picker=document.getElementById('avatar-picker');
+  if(!picker) return;
+  const current=document.getElementById('contact-avatar').value||'👩';
+  picker.innerHTML=AVATARS.map(a=>`<button type="button" class="avatar-option ${a===current?'selected':''}" onclick="selectAvatar('${a}')">${a}</button>`).join('');
+}
+function selectAvatar(emoji) {
+  document.getElementById('contact-avatar').value=emoji; initAvatarPicker();
+}
+function addContact() {
+  const name=document.getElementById('contact-name').value.trim();
+  const phone=document.getElementById('contact-phone').value.trim();
+  if(!name||!phone){ alert('Please enter a name and phone number.'); return; }
+  data.contacts.push({id:Date.now(),name,phone,rel:document.getElementById('contact-rel').value.trim(),avatar:document.getElementById('contact-avatar').value||'🙂'});
+  save(); ['contact-name','contact-phone','contact-rel'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('contact-avatar').value='👩'; initAvatarPicker(); render();
+}
+function deleteContact(id) {
+  if(confirm('Remove this contact?')){ data.contacts=data.contacts.filter(c=>c.id!==id); save(); render(); }
+}
+function renderContacts() {
+  const callList=document.getElementById('contact-call-list');
+  const list=document.getElementById('contact-list');
+  if(!callList) return;
+  if(data.contacts.length===0){ callList.innerHTML='<div style="color:#8B3A4A;font-size:14px;padding:6px 0">No contacts added yet.</div>'; list.innerHTML=''; return; }
+  callList.innerHTML=data.contacts.map(c=>`<a href="tel:${c.phone}" style="text-decoration:none"><button class="call-btn"><span class="call-icon">${c.avatar||'🙂'}</span><div class="call-info"><div class="call-name">${c.name}</div><div class="call-number">${c.rel?c.rel+' · ':''}${c.phone}</div></div><span style="margin-left:auto;font-size:22px">📞</span></button></a>`).join('');
+  list.innerHTML=data.contacts.map(c=>`<div class="item"><div class="item-content"><div class="item-name">${c.avatar||'🙂'} ${c.name}</div><div class="item-detail">${c.rel?c.rel+' · ':''}${c.phone}</div></div><button class="edit-btn" onclick="editContact(${c.id})">✏️</button><button class="delete-btn" onclick="deleteContact(${c.id})">✕</button></div>`).join('');
+}
+
+// ===== HOME PAGE =====
+function renderHome() {
+  const apptSec=document.getElementById('home-appts-section');
+  const medSec=document.getElementById('home-meds-section');
+  const remSec=document.getElementById('home-reminders-section');
+  const bdSec=document.getElementById('home-birthdays-section');
+  const emptyEl=document.getElementById('home-empty');
+  if(!medSec) return;
+  let hasAnything=false;
+  const today0=new Date(); today0.setHours(0,0,0,0);
+
+  // Today's appointments
+  const todayAppts=data.appointments.filter(a=>Math.round((new Date(a.date+'T00:00:00')-today0)/86400000)===0).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  if(todayAppts.length>0){
+    hasAnything=true;
+    apptSec.innerHTML='<div class="home-section-title">🏥 Today&#39;s Appointments</div>'+todayAppts.map(a=>`<div class="home-row"><span style="font-size:24px">🏥</span><div style="flex:1"><div style="font-size:15px;font-weight:800">${a.title}</div><div style="font-size:12px;color:var(--text-mid)">Today${a.time?' at '+formatTime(a.time):''}${a.doctor?' · '+a.doctor:''}</div>${a.notes?'<div style="font-size:12px;color:var(--text-mid)">📋 '+a.notes+'</div>':''}</div></div>`).join('');
+  } else { apptSec.innerHTML=''; }
+
+  // Medications
+  if(data.meds.length>0){
+    hasAnything=true;
+    let totalDoses=0,takenDoses=0;
+    data.meds.forEach(m=>{ getMedDoseLabels(m).forEach((_,i)=>{ totalDoses++; if(data.medTaken[m.id+'_dose'+i+'_'+todayKey]) takenDoses++; }); });
+    const allDone=takenDoses===totalDoses;
+    const pct=totalDoses>0?Math.round(takenDoses/totalDoses*100):0;
+    medSec.innerHTML=`<div class="home-section-title">💊 Today's Medications</div><div style="margin-bottom:9px"><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div><div class="progress-label">${takenDoses} of ${totalDoses} dose${totalDoses!==1?'s':''} taken</div></div>${allDone?'<div class="all-done-banner">🎉 All medications taken today!</div>':''}${data.meds.map(m=>getMedDoseLabels(m).map((label,i)=>{const taken=!!data.medTaken[m.id+'_dose'+i+'_'+todayKey];const timeStr=m.doseTimes&&m.doseTimes[i]?' · '+formatTime(m.doseTimes[i]):'';return `<div class="med-check-item ${taken?'checked':''}" onclick="toggleMedTaken(${m.id},${i})"><div class="med-checkbox">${taken?'✓':''}</div><div class="med-check-label"><div class="med-check-name">${m.name}</div><div class="med-check-detail">${m.doseTimes&&m.doseTimes[i]?formatTime(m.doseTimes[i])+' · ':''}${m.dose?m.dose:''}</div></div></div>`;}).join('')).join('')}`;
+  } else { medSec.innerHTML=''; }
+
+  // Due reminders
+  const todayRems=data.reminders.filter(r=>!r.done&&new Date(r.date+'T00:00:00')<=today0);
+  if(todayRems.length>0){
+    hasAnything=true;
+    remSec.innerHTML='<div class="home-section-title">⏰ Reminders Due</div>'+todayRems.map(r=>`<div class="home-row"><span style="font-size:24px">⏰</span><div style="flex:1"><div style="font-size:15px;font-weight:800">${r.title}</div><div style="font-size:12px;color:var(--text-mid)">${repeatLabel(r)?'🔁 '+repeatLabel(r):'One time'}</div></div><button onclick="toggleReminder(${r.id})" style="background:var(--teal);border:none;border-radius:10px;color:white;font-size:12px;font-weight:800;padding:7px 11px;cursor:pointer">${r.repeat!=='None'?'✓ Done':'Done ✓'}</button></div>`).join('');
+  } else { remSec.innerHTML=''; }
+
+  // Combined upcoming this week (days 1-7)
+  const combined=[
+    ...data.appointments.filter(a=>{ const d=Math.round((new Date(a.date+'T00:00:00')-today0)/86400000); return d>=1&&d<=7; }).map(a=>({days:Math.round((new Date(a.date+'T00:00:00')-today0)/86400000),icon:'🏥',title:a.title,detail:(a.doctor?a.doctor:'')+(a.time?(a.doctor?' · ':'')+formatTime(a.time):'')})),
+    ...data.reminders.filter(r=>!r.done&&(()=>{const d=Math.round((new Date(r.date+'T00:00:00')-today0)/86400000);return d>=1&&d<=7;})()).map(r=>({days:Math.round((new Date(r.date+'T00:00:00')-today0)/86400000),icon:'⏰',title:r.title,detail:repeatLabel(r)?'🔁 '+repeatLabel(r):''})),
+    ...data.birthdays.filter(b=>{ const d=daysUntil(b.date); return d>=0&&d<=7; }).map(b=>({days:daysUntil(b.date),icon:b.days===0?'🎉':'🎂',title:b.name,detail:b.type}))
+  ].sort((a,b)=>a.days-b.days);
+
+  if(combined.length>0){
+    hasAnything=true;
+    bdSec.innerHTML='<div class="home-section-title">📅 Upcoming This Week</div>'+combined.map(item=>{
+      const when=item.days===0?'Today':item.days===1?'Tomorrow':DAYS[new Date(new Date().setDate(new Date().getDate()+item.days)).getDay()];
+      return `<div class="home-row"><span style="font-size:24px">${item.icon}</span><div style="flex:1"><div style="font-size:15px;font-weight:800">${item.title}</div>${item.detail?`<div style="font-size:12px;color:var(--text-mid)">${item.detail}</div>`:''}</div><span style="font-size:12px;font-weight:800;background:#FDE8D8;color:var(--warm-orange);padding:4px 10px;border-radius:20px;white-space:nowrap">${when}</span></div>`;
+    }).join('');
+  } else { bdSec.innerHTML=''; }
+
+  emptyEl.innerHTML=!hasAnything?`<div class="empty" style="margin-top:36px"><div class="empty-icon">🌻</div><div style="font-size:16px;font-weight:700;margin-bottom:7px">Nothing scheduled today!</div><div style="font-size:13px">Use the tabs to add medications, reminders, and appointments.</div></div>`:'';
+}
+
+// ===== GAMES =====
+
+// --- TRIVIA ---
+const TRIVIA_BANK = [
+  {q:"What is the capital of Canada?",opts:["Toronto","Vancouver","Ottawa","Montreal"],a:2},
+  {q:"How many days are in a leap year?",opts:["364","365","366","367"],a:2},
+  {q:"What planet is known as the Red Planet?",opts:["Venus","Mars","Jupiter","Saturn"],a:1},
+  {q:"How many sides does a hexagon have?",opts:["5","6","7","8"],a:1},
+  {q:"What ocean is on Canada's west coast?",opts:["Atlantic","Arctic","Indian","Pacific"],a:3},
+  {q:"Who painted the Mona Lisa?",opts:["Picasso","Da Vinci","Michelangelo","Rembrandt"],a:1},
+  {q:"How many months have 31 days?",opts:["5","6","7","8"],a:2},
+  {q:"What is the largest planet in our solar system?",opts:["Saturn","Neptune","Jupiter","Uranus"],a:2},
+  {q:"In which season do leaves fall from trees?",opts:["Spring","Summer","Autumn","Winter"],a:2},
+  {q:"How many zeros are in one million?",opts:["5","6","7","8"],a:1},
+  {q:"What instrument has black and white keys?",opts:["Guitar","Piano","Violin","Trumpet"],a:1},
+  {q:"What do bees make?",opts:["Milk","Wax only","Honey","Silk"],a:2},
+  {q:"How many hours are in a day?",opts:["12","18","24","48"],a:2},
+  {q:"What colour is a polar bear?",opts:["Yellow","Grey","White","Cream"],a:2},
+  {q:"Which fruit is known to keep the doctor away?",opts:["Banana","Apple","Orange","Pear"],a:1},
+  {q:"How many cents make a dollar?",opts:["10","50","100","1000"],a:2},
+  {q:"What is the tallest mountain in the world?",opts:["K2","Everest","Kilimanjaro","Logan"],a:1},
+  {q:"What colour is the sky on a clear day?",opts:["Green","Blue","Purple","Grey"],a:1},
+  {q:"How many wheels does a tricycle have?",opts:["2","3","4","5"],a:1},
+  {q:"What animal is known as man's best friend?",opts:["Cat","Rabbit","Dog","Horse"],a:2},
+  {q:"What country is known as the Land of the Rising Sun?",opts:["China","Korea","Japan","Thailand"],a:2},
+  {q:"How many sides does a triangle have?",opts:["2","3","4","5"],a:1},
+  {q:"What is the largest ocean on Earth?",opts:["Atlantic","Indian","Arctic","Pacific"],a:3},
+  {q:"Which bird is known for delivering babies in fairy tales?",opts:["Crow","Stork","Swan","Dove"],a:1},
+  {q:"What is the currency of the United Kingdom?",opts:["Euro","Dollar","Pound","Franc"],a:2},
+  {q:"How many strings does a standard guitar have?",opts:["4","5","6","7"],a:2},
+  {q:"What do you call a baby cat?",opts:["Pup","Cub","Kitten","Foal"],a:2},
+  {q:"What colour is a ripe banana?",opts:["Green","Red","Yellow","Orange"],a:2},
+  {q:"How many players are on a hockey team on the ice?",opts:["5","6","7","8"],a:1},
+  {q:"What is frozen water called?",opts:["Steam","Ice","Sleet","Frost"],a:1},
+];
+let triviaScore=0, triviaTotal=0, triviaAnswered=false;
+let triviaRemaining=[...Array(TRIVIA_BANK.length).keys()];
+
+function loadTrivia() {
+  triviaAnswered=false;
+  if(triviaRemaining.length===0) triviaRemaining=[...Array(TRIVIA_BANK.length).keys()];
+  const idx=triviaRemaining.splice(Math.floor(Math.random()*triviaRemaining.length),1)[0];
+  const q=TRIVIA_BANK[idx];
+  document.getElementById('trivia-area').innerHTML=`<div class="trivia-question">${q.q}</div>${q.opts.map((opt,i)=>`<button class="trivia-option" onclick="answerTrivia(this,${i},${q.a})">${opt}</button>`).join('')}`;
+  document.getElementById('trivia-score').textContent=triviaTotal>0?`Score: ${triviaScore} / ${triviaTotal}`:'';
+}
+function answerTrivia(btn,chosen,correct) {
+  if(triviaAnswered) return;
+  triviaAnswered=true; triviaTotal++;
+  document.querySelectorAll('.trivia-option').forEach((b,i)=>{ b.disabled=true; if(i===correct) b.classList.add('correct'); });
+  if(chosen===correct) { triviaScore++; btn.classList.add('correct'); }
+  else { btn.classList.add('wrong'); }
+  document.getElementById('trivia-score').textContent=`Score: ${triviaScore} / ${triviaTotal}`;
+  setTimeout(loadTrivia, 1800);
+}
+
+// --- MATH QUIZ ---
+let mathScore=0, mathTotal=0, mathAnswered=false;
+function loadMath() {
+  mathAnswered=false;
+  const ops=['+','-','×'];
+  const op=ops[Math.floor(Math.random()*ops.length)];
+  let a,b,answer;
+  if(op==='+'){a=Math.floor(Math.random()*50)+1;b=Math.floor(Math.random()*50)+1;answer=a+b;}
+  else if(op==='-'){a=Math.floor(Math.random()*50)+10;b=Math.floor(Math.random()*a)+1;answer=a-b;}
+  else{a=Math.floor(Math.random()*10)+2;b=Math.floor(Math.random()*10)+2;answer=a*b;}
+  // Generate 3 wrong answers
+  const wrongs=new Set();
+  while(wrongs.size<3){ const w=answer+Math.floor(Math.random()*20)-10; if(w!==answer&&w>0) wrongs.add(w); }
+  const opts=[answer,...wrongs].sort(()=>Math.random()-0.5);
+  document.getElementById('math-area').innerHTML=`<div class="math-display">${a} ${op} ${b} = ?</div><div class="math-options">${opts.map(o=>`<button class="math-opt" onclick="answerMath(this,${o},${answer})">${o}</button>`).join('')}</div>`;
+  document.getElementById('math-score').textContent=mathTotal>0?`Score: ${mathScore} / ${mathTotal}`:'';
+}
+function answerMath(btn,chosen,correct) {
+  if(mathAnswered) return;
+  mathAnswered=true; mathTotal++;
+  document.querySelectorAll('.math-opt').forEach(b=>{ b.disabled=true; if(parseInt(b.textContent)===correct) b.classList.add('correct'); });
+  if(chosen===correct) { mathScore++; btn.classList.add('correct'); }
+  else btn.classList.add('wrong');
+  document.getElementById('math-score').textContent=`Score: ${mathScore} / ${mathTotal}`;
+  setTimeout(loadMath,1500);
+}
+
+// --- WORD SCRAMBLE ---
+const WORD_BANK=[
+  {word:'GARDEN',hint:'You grow flowers here'},{word:'COFFEE',hint:'Hot morning drink'},
+  {word:'WINTER',hint:'Cold season'},{word:'FAMILY',hint:'People you love'},
+  {word:'BRIDGE',hint:'Crosses over water'},{word:'BUTTER',hint:'Goes on toast'},
+  {word:'CANDLE',hint:'Gives off light and flame'},{word:'DOCTOR',hint:'Keeps you healthy'},
+  {word:'FLOWER',hint:'Pretty plant that blooms'},{word:'PILLOW',hint:'Rest your head here'},
+  {word:'KITTEN',hint:'Baby cat'},{word:'MIRROR',hint:'See your reflection'},
+  {word:'ORANGE',hint:'Citrus fruit or colour'},{word:'PLANET',hint:'Earth is one of these'},
+  {word:'RABBIT',hint:'Hops and has long ears'},{word:'SILVER',hint:'Shiny grey metal'},
+  {word:'TURKEY',hint:'Thanksgiving bird'},{word:'CASTLE',hint:'Where a king lives'},
+  {word:'PURPLE',hint:'Mix of red and blue'},{word:'JUNGLE',hint:'Dense tropical forest'},
+  {word:'STARFISH',hint:'Has five arms, lives in the ocean'},{word:'RAINBOW',hint:'Appears after rain'},
+  {word:'BLANKET',hint:'Keeps you warm in bed'},{word:'CHICKEN',hint:'Common farm bird'},
+];
+let scrambleAnswer='', scrambleUsed=[];
+function scrambleWord(w){ let a=w.split(''); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} const s=a.join(''); return s===w?scrambleWord(w):s; }
+function startScramble() {
+  document.getElementById('scramble-next-btn').style.display='none';
+  let avail=WORD_BANK.filter((_,i)=>!scrambleUsed.includes(i));
+  if(avail.length===0){scrambleUsed=[];avail=[...WORD_BANK];}
+  const pick=avail[Math.floor(Math.random()*avail.length)];
+  scrambleUsed.push(WORD_BANK.indexOf(pick));
+  scrambleAnswer=pick.word;
+  const sc=scrambleWord(pick.word);
+  document.getElementById('scramble-area').innerHTML=`<div style="font-size:13px;color:var(--text-mid);text-align:center;margin-bottom:4px">💡 Hint: ${pick.hint}</div><div class="scramble-word">${sc}</div><input type="text" id="scramble-input" placeholder="Type your answer..." style="width:100%;padding:11px 14px;border:2px solid #E8D5C4;border-radius:12px;font-size:18px;font-family:'Nunito',sans-serif;text-align:center;text-transform:uppercase;margin-top:7px" oninput="checkScramble(this)"><div id="scramble-feedback" style="text-align:center;font-size:14px;font-weight:800;margin-top:7px;min-height:22px"></div>`;
+  setTimeout(()=>{ const el=document.getElementById('scramble-input'); if(el) el.focus(); },100);
+}
+function checkScramble(input) {
+  const val=input.value.toUpperCase().replace(/\s/g,'');
+  const fb=document.getElementById('scramble-feedback');
+  if(val===scrambleAnswer){
+    fb.innerHTML='🎉 Correct!'; fb.style.color='#2D6B40';
+    input.style.borderColor='var(--soft-green)'; input.style.background='#DFF2E4';
+    input.disabled=true;
+    document.getElementById('scramble-next-btn').style.display='inline-flex';
+  }
+}
+
+// --- MEMORY MATCH ---
+const MEM_EMOJIS=['🌸','🌻','🍎','🐶','🎵','⭐','🌈','🦋'];
+let memFlipped=[],memMatched=0,memMoves=0,memLock=false;
+function startMemory() {
+  document.getElementById('memory-new-btn').style.display='none';
+  const cards=[...MEM_EMOJIS,...MEM_EMOJIS].sort(()=>Math.random()-0.5);
+  memFlipped=[]; memMatched=0; memMoves=0; memLock=false;
+  document.getElementById('memory-score').textContent='Moves: 0';
+  document.getElementById('memory-area').innerHTML=`<div class="memory-grid">${cards.map((e,i)=>`<button class="mem-card" id="mc${i}" onclick="flipCard(${i},'${e}')"></button>`).join('')}</div>`;
+}
+function flipCard(idx,emoji) {
+  if(memLock) return;
+  const card=document.getElementById('mc'+idx);
+  if(card.classList.contains('flipped')||card.classList.contains('matched')) return;
+  card.textContent=emoji; card.classList.add('flipped'); memFlipped.push({idx,emoji});
+  if(memFlipped.length===2){
+    memMoves++; memLock=true;
+    document.getElementById('memory-score').textContent='Moves: '+memMoves;
+    if(memFlipped[0].emoji===memFlipped[1].emoji){
+      document.getElementById('mc'+memFlipped[0].idx).classList.replace('flipped','matched');
+      document.getElementById('mc'+memFlipped[1].idx).classList.replace('flipped','matched');
+      memMatched++; memFlipped=[]; memLock=false;
+      if(memMatched===MEM_EMOJIS.length){
+        document.getElementById('memory-score').innerHTML='🎉 You won in '+memMoves+' moves!';
+        document.getElementById('memory-new-btn').style.display='inline-flex';
+      }
+    } else {
+      setTimeout(()=>{
+        document.getElementById('mc'+memFlipped[0].idx).textContent=''; document.getElementById('mc'+memFlipped[0].idx).classList.remove('flipped');
+        document.getElementById('mc'+memFlipped[1].idx).textContent=''; document.getElementById('mc'+memFlipped[1].idx).classList.remove('flipped');
+        memFlipped=[]; memLock=false;
+      },900);
+    }
+  }
+}
+
+// --- SPELL IT OUT ---
+const SPELL_BANK=[
+  {word:'BUTTERFLY',hint:'Beautiful insect with wings 🦋'},
+  {word:'ELEPHANT',hint:'Largest land animal 🐘'},
+  {word:'CHOCOLATE',hint:'Sweet treat made from cocoa 🍫'},
+  {word:'TELEPHONE',hint:'You use this to call people 📞'},
+  {word:'UMBRELLA',hint:'Keeps you dry in the rain ☂️'},
+  {word:'STRAWBERRY',hint:'Red berry with seeds on outside 🍓'},
+  {word:'MOUNTAIN',hint:'Very tall landform ⛰️'},
+  {word:'HOSPITAL',hint:'Where doctors help you get better 🏥'},
+  {word:'PINEAPPLE',hint:'Tropical spiky fruit 🍍'},
+  {word:'SANDWICH',hint:'Filling between two slices of bread 🥪'},
+  {word:'CALENDAR',hint:'Shows the days of the year 📅'},
+  {word:'NEWSPAPER',hint:'Daily printed news 📰'},
+];
+let spellAnswer='', spellGuess=[], spellUsed=[], spellTiles=[];
+function startSpelling() {
+  document.getElementById('spelling-next-btn').style.display='none';
+  let avail=SPELL_BANK.filter((_,i)=>!spellUsed.includes(i));
+  if(avail.length===0){spellUsed=[];avail=[...SPELL_BANK];}
+  const pick=avail[Math.floor(Math.random()*avail.length)];
+  spellUsed.push(SPELL_BANK.indexOf(pick));
+  spellAnswer=pick.word; spellGuess=Array(pick.word.length).fill('');
+  // Create shuffled letter tiles (answer letters + 2 extras)
+  const extras='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c=>!pick.word.includes(c));
+  const extraLetters=extras.sort(()=>Math.random()-0.5).slice(0,3);
+  spellTiles=[...pick.word.split(''),...extraLetters].sort(()=>Math.random()-0.5).map((l,i)=>({letter:l,id:i,used:false}));
+  renderSpelling(pick.hint);
+}
+function renderSpelling(hint) {
+  document.getElementById('spelling-area').innerHTML=`
+    <div class="spelling-hint">💡 ${hint}</div>
+    <div class="word-blanks" id="spell-blanks">
+      ${spellGuess.map((l,i)=>`<div class="blank-box" id="sb${i}" onclick="removeSpellLetter(${i})">${l}</div>`).join('')}
+    </div>
+    <div class="letter-bank" id="spell-tiles">
+      ${spellTiles.map(t=>`<button class="letter-tile ${t.used?'used':''}" id="st${t.id}" onclick="addSpellLetter(${t.id})">${t.letter}</button>`).join('')}
+    </div>
+    <div id="spell-feedback" style="text-align:center;font-size:14px;font-weight:800;min-height:22px;margin-top:6px"></div>
+  `;
+}
+function addSpellLetter(tileId) {
+  const tile=spellTiles.find(t=>t.id===tileId);
+  if(!tile||tile.used) return;
+  const emptyIdx=spellGuess.indexOf('');
+  if(emptyIdx===-1) return;
+  spellGuess[emptyIdx]=tile.letter; tile.used=true;
+  updateSpellingDisplay();
+  if(!spellGuess.includes('')){
+    const word=spellGuess.join('');
+    const fb=document.getElementById('spell-feedback');
+    if(word===spellAnswer){ fb.innerHTML='🎉 Correct! Well done!'; fb.style.color='#2D6B40'; document.getElementById('spelling-next-btn').style.display='inline-flex'; document.querySelectorAll('.letter-tile').forEach(b=>b.disabled=true); }
+    else { fb.innerHTML='Not quite — try again!'; fb.style.color='var(--rose)'; }
+  }
+}
+function removeSpellLetter(idx) {
+  if(!spellGuess[idx]) return;
+  const letter=spellGuess[idx]; spellGuess[idx]='';
+  const tile=spellTiles.find(t=>t.letter===letter&&t.used);
+  if(tile) tile.used=false;
+  updateSpellingDisplay();
+  const fb=document.getElementById('spell-feedback'); if(fb) fb.innerHTML='';
+}
+function updateSpellingDisplay() {
+  spellGuess.forEach((l,i)=>{ const el=document.getElementById('sb'+i); if(el) el.textContent=l; });
+  spellTiles.forEach(t=>{ const el=document.getElementById('st'+t.id); if(el){ el.classList.toggle('used',t.used); el.disabled=t.used; } });
+}
+
+// ===== RENDER ALL =====
+function render() {
+  renderHome();
+  renderMeds();
+  renderBirthdays();
+  renderNotes();
+  renderReminders();
+  renderAppts();
+  renderGrocery();
+  initGroceryPicker();
+  renderContacts();
+  renderPasswords();
+}
+
+
+
+// ===== REPEAT UI HELPERS =====
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function updateRepeatUI(prefix) {
+  const sel   = document.getElementById(prefix + '-repeat');
+  const extra = document.getElementById(prefix + '-repeat-extra');
+  if(!sel || !extra) return;
+  const val = sel.value;
+
+  if(val === 'Interval') {
+    extra.style.display = 'block';
+    extra.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:14px;font-weight:700;color:var(--text-mid)">Repeat every</span>
+        <input type="number" id="${prefix}-interval" min="2" max="365" value="2"
+          style="width:75px;padding:10px 12px;border:2px solid #E8D5C4;border-radius:10px;font-size:16px;font-family:'Nunito',sans-serif">
+        <span style="font-size:14px;font-weight:700;color:var(--text-mid)">days</span>
+      </div>`;
+  } else if(val === 'Weekdays') {
+    extra.style.display = 'block';
+    extra.innerHTML = `
+      <div style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:8px">Which days?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${DAY_NAMES.map((d,i) => `<button type="button" id="${prefix}-day-${i}"
+          onclick="toggleDayBtn('${prefix}',${i})"
+          style="padding:8px 11px;border:2px solid #E8D5C4;border-radius:10px;background:white;
+                 font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;
+                 transition:all 0.15s">${d}</button>`).join('')}
+      </div>`;
+  } else {
+    extra.style.display = 'none';
+    extra.innerHTML = '';
+  }
+}
+
+function toggleDayBtn(prefix, dayIndex) {
+  const btn = document.getElementById(prefix + '-day-' + dayIndex);
+  if(!btn) return;
+  const active = btn.getAttribute('data-active') === '1';
+  btn.setAttribute('data-active', active ? '0' : '1');
+  btn.style.background    = active ? 'white'            : 'var(--teal)';
+  btn.style.color         = active ? 'var(--text-dark)' : 'white';
+  btn.style.borderColor   = active ? '#E8D5C4'          : 'var(--teal)';
+}
+
+function getRepeatData(prefix, repeatType) {
+  if(repeatType === 'Interval') {
+    const v = parseInt(document.getElementById(prefix + '-interval')?.value) || 2;
+    return { interval: Math.max(2, Math.min(365, v)) };
+  }
+  if(repeatType === 'Weekdays') {
+    const days = [];
+    for(let i=0;i<7;i++){
+      const btn = document.getElementById(prefix + '-day-' + i);
+      if(btn && btn.getAttribute('data-active') === '1') days.push(i);
+    }
+    return { days: days.length > 0 ? days : [1] }; // default Monday if none chosen
+  }
+  return {};
+}
+
+function repeatLabel(r) {
+  if(!r.repeat || r.repeat === 'None')   return '';
+  if(r.repeat === 'Daily')               return 'Every day';
+  if(r.repeat === 'Weekly')              return 'Every week';
+  if(r.repeat === 'Monthly')             return 'Every month';
+  if(r.repeat === 'Interval') {
+    const n = (r.repeatData||{}).interval || 2;
+    return `Every ${n} days`;
+  }
+  if(r.repeat === 'Weekdays') {
+    const chosen = (r.repeatData||{}).days || [];
+    if(chosen.length === 0) return 'Specific days';
+    return chosen.map(d => DAY_NAMES[d]).join(' & ');
+  }
+  return r.repeat;
+}
+
+// Populate repeat extra fields when opening edit modal
+function populateRepeatExtra(prefix, r) {
+  updateRepeatUI(prefix);
+  if(r.repeat === 'Interval' && r.repeatData) {
+    const el = document.getElementById(prefix + '-interval');
+    if(el) el.value = r.repeatData.interval || 2;
+  }
+  if(r.repeat === 'Weekdays' && r.repeatData) {
+    const chosen = r.repeatData.days || [];
+    chosen.forEach(d => {
+      const btn = document.getElementById(prefix + '-day-' + d);
+      if(btn) {
+        btn.setAttribute('data-active','1');
+        btn.style.background  = 'var(--teal)';
+        btn.style.color       = 'white';
+        btn.style.borderColor = 'var(--teal)';
+      }
+    });
+  }
+}
+
+// ===== EDIT MODAL =====
+let modalSaveFn = null;
+
+function openModal(title, bodyHtml, saveFn) {
+  document.getElementById('modal-title-text').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  modalSaveFn = saveFn;
+  document.getElementById('modal-save-btn').onclick = () => { if(modalSaveFn) modalSaveFn(); };
+  document.getElementById('edit-modal').classList.add('show');
+  // Re-init avatar picker if present
+  const ap = document.getElementById('modal-avatar-picker');
+  if(ap) initModalAvatarPicker();
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('show');
+  modalSaveFn = null;
+}
+
+function closeEditModal(e) {
+  if(e.target === document.getElementById('edit-modal')) closeModal();
+}
+
+function initModalAvatarPicker() {
+  const picker = document.getElementById('modal-avatar-picker');
+  if(!picker) return;
+  const current = document.getElementById('modal-contact-avatar').value || '👩';
+  picker.innerHTML = AVATARS.map(a => `<button type="button" class="avatar-option ${a===current?'selected':''}" onclick="selectModalAvatar('${a}')">${a}</button>`).join('');
+}
+
+function selectModalAvatar(emoji) {
+  document.getElementById('modal-contact-avatar').value = emoji;
+  initModalAvatarPicker();
+}
+
+// --- Edit Med ---
+function editMed(id) {
+  const m = data.meds.find(m=>m.id===id);
+  if(!m) return;
+  openModal('✏️ Edit Medication', `
+    <label>Medication Name</label>
+    <input type="text" id="modal-med-name" value="${m.name}">
+    <label>Dosage</label>
+    <input type="text" id="modal-med-dose" value="${m.dose||''}">
+    <label>Times Per Day</label>
+    <select id="modal-med-freq" onchange="updateMedTimeInputs('modal-med')">
+      <option value="1" ${m.freq==1?'selected':''}>Once a day</option>
+      <option value="2" ${m.freq==2?'selected':''}>Twice a day</option>
+      <option value="3" ${m.freq==3?'selected':''}>Three times a day</option>
+      <option value="4" ${m.freq==4?'selected':''}>Four times a day</option>
+      <option value="0" ${m.freq==0?'selected':''}>As needed</option>
+    </select>
+    <div id="modal-med-time-inputs"></div>
+    <label>Notes</label>
+    <input type="text" id="modal-med-notes" value="${m.notes||''}">
+  `, () => {
+    const name = document.getElementById('modal-med-name').value.trim();
+    if(!name){ alert('Please enter a name.'); return; }
+    const freq = parseInt(document.getElementById('modal-med-freq').value)||0;
+    const { doseLabels, doseTimes } = getMedTimesFromInputs('modal-med', freq);
+    m.name       = name;
+    m.dose       = document.getElementById('modal-med-dose').value.trim();
+    m.freq       = freq;
+    m.doseLabels = doseLabels;
+    m.doseTimes  = doseTimes;
+    m.notes      = document.getElementById('modal-med-notes').value.trim();
+    save(); render(); closeModal();
+  });
+  // Pre-fill time inputs after modal DOM is ready
+  setTimeout(() => populateMedTimeInputs('modal-med', m), 60);
+}
+
+// --- Edit Birthday/Event ---
+function editBirthday(id) {
+  const b = data.birthdays.find(b=>b.id===id);
+  if(!b) return;
+  openModal('✏️ Edit Event', `
+    <label>Person's Name</label>
+    <input type="text" id="modal-bday-name" value="${b.name}">
+    <label>Type</label>
+    <select id="modal-bday-type">
+      <option value="🎂 Birthday" ${b.type==='🎂 Birthday'?'selected':''}>🎂 Birthday</option>
+      <option value="💍 Anniversary" ${b.type==='💍 Anniversary'?'selected':''}>💍 Anniversary</option>
+      <option value="⭐ Special Day" ${b.type==='⭐ Special Day'?'selected':''}>⭐ Special Day</option>
+    </select>
+    <label>Date</label>
+    <input type="date" id="modal-bday-date" value="${b.date}">
+  `, () => {
+    const name = document.getElementById('modal-bday-name').value.trim();
+    const date = document.getElementById('modal-bday-date').value;
+    if(!name||!date){ alert('Please fill in all fields.'); return; }
+    b.name = name;
+    b.type = document.getElementById('modal-bday-type').value;
+    b.date = date;
+    save(); render(); closeModal();
+  });
+}
+
+// --- Edit Note ---
+function editNote(id) {
+  const n = data.notes.find(n=>n.id===id);
+  if(!n) return;
+  openModal('✏️ Edit Note', `
+    <label>Note</label>
+    <textarea id="modal-note-text">${n.text}</textarea>
+  `, () => {
+    const text = document.getElementById('modal-note-text').value.trim();
+    if(!text){ alert('Note cannot be empty.'); return; }
+    n.text = text;
+    save(); render(); closeModal();
+  });
+}
+
+// --- Edit Reminder ---
+function editReminder(id) {
+  const r = data.reminders.find(r=>r.id===id);
+  if(!r) return;
+  openModal('✏️ Edit Reminder', `
+    <label>Reminder</label>
+    <input type="text" id="modal-rem-title" value="${r.title}">
+    <label>Date</label>
+    <input type="date" id="modal-rem-date" value="${r.date}">
+    <label>Time (optional)</label>
+    <input type="time" id="modal-rem-time" value="${r.time||''}">
+    <label>Repeat</label>
+    <select id="modal-rem-repeat" onchange="updateRepeatUI('modal-rem')">
+      <option value="None" ${r.repeat==='None'?'selected':''}>No repeat — just once</option>
+      <option value="Daily" ${r.repeat==='Daily'?'selected':''}>Every day</option>
+      <option value="Weekly" ${r.repeat==='Weekly'?'selected':''}>Every week (same day)</option>
+      <option value="Monthly" ${r.repeat==='Monthly'?'selected':''}>Every month (same date)</option>
+      <option value="Interval" ${r.repeat==='Interval'?'selected':''}>Every ___ days</option>
+      <option value="Weekdays" ${r.repeat==='Weekdays'?'selected':''}>Specific days of the week</option>
+    </select>
+    <div id="modal-rem-repeat-extra" style="display:none;margin-top:8px"></div>
+  `, () => {
+    const title = document.getElementById('modal-rem-title').value.trim();
+    const date  = document.getElementById('modal-rem-date').value;
+    if(!title||!date){ alert('Please fill in title and date.'); return; }
+    const rType = document.getElementById('modal-rem-repeat').value;
+    r.title      = title;
+    r.date       = date;
+    r.time       = document.getElementById('modal-rem-time').value;
+    r.repeat     = rType;
+    r.repeatData = getRepeatData('modal-rem', rType);
+    r.done       = false;
+    save(); render(); closeModal();
+  });
+  // Pre-populate repeat UI after modal renders
+  setTimeout(() => populateRepeatExtra('modal-rem', r), 50);
+}
+
+// --- Edit Appointment ---
+function editAppt(id) {
+  const a = data.appointments.find(a=>a.id===id);
+  if(!a) return;
+  openModal('✏️ Edit Appointment', `
+    <label>What is it for?</label>
+    <input type="text" id="modal-appt-title" value="${a.title}">
+    <label>Doctor's Name</label>
+    <input type="text" id="modal-appt-doctor" value="${a.doctor||''}">
+    <label>Location</label>
+    <input type="text" id="modal-appt-location" value="${a.location||''}">
+    <label>Date</label>
+    <input type="date" id="modal-appt-date" value="${a.date}">
+    <label>Time</label>
+    <input type="time" id="modal-appt-time" value="${a.time||''}">
+    <label>Notes</label>
+    <input type="text" id="modal-appt-notes" value="${a.notes||''}">
+  `, () => {
+    const title = document.getElementById('modal-appt-title').value.trim();
+    const date  = document.getElementById('modal-appt-date').value;
+    if(!title||!date){ alert('Please fill in title and date.'); return; }
+    a.title    = title;
+    a.doctor   = document.getElementById('modal-appt-doctor').value.trim();
+    a.location = document.getElementById('modal-appt-location').value.trim();
+    a.date     = date;
+    a.time     = document.getElementById('modal-appt-time').value;
+    a.notes    = document.getElementById('modal-appt-notes').value.trim();
+    save(); render(); closeModal();
+  });
+}
+
+// --- Edit Grocery ---
+function editGrocery(id) {
+  const g = data.grocery.find(g=>g.id===id);
+  if(!g) return;
+  openModal('✏️ Edit Grocery Item', `
+    <label>Item Name</label>
+    <input type="text" id="modal-groc-item" value="${g.item}">
+    <label>Quantity</label>
+    <input type="text" id="modal-groc-qty" value="${g.qty||''}">
+    <label>Category</label>
+    <select id="modal-groc-cat">
+      ${['🥩 Meat & Fish','🥦 Produce','🥛 Dairy','🍞 Bread & Bakery','🥫 Pantry & Canned','🧴 Personal Care','🧹 Household','❄️ Frozen','🍭 Snacks & Sweets','🛒 Other'].map(c=>`<option value="${c}" ${g.cat===c?'selected':''}>${c}</option>`).join('')}
+    </select>
+  `, () => {
+    const item = document.getElementById('modal-groc-item').value.trim();
+    if(!item){ alert('Please enter an item name.'); return; }
+    g.item = item;
+    g.qty  = document.getElementById('modal-groc-qty').value.trim();
+    g.cat  = document.getElementById('modal-groc-cat').value;
+    save(); render(); closeModal();
+  });
+}
+
+// --- Edit Contact ---
+function editContact(id) {
+  const c = data.contacts.find(c=>c.id===id);
+  if(!c) return;
+  openModal('✏️ Edit Contact', `
+    <label>Avatar</label>
+    <input type="hidden" id="modal-contact-avatar" value="${c.avatar||'👩'}">
+    <div id="modal-avatar-picker" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px"></div>
+    <label>Name</label>
+    <input type="text" id="modal-contact-name" value="${c.name}">
+    <label>Phone Number</label>
+    <input type="tel" id="modal-contact-phone" value="${c.phone}">
+    <label>Relationship</label>
+    <input type="text" id="modal-contact-rel" value="${c.rel||''}">
+  `, () => {
+    const name  = document.getElementById('modal-contact-name').value.trim();
+    const phone = document.getElementById('modal-contact-phone').value.trim();
+    if(!name||!phone){ alert('Please enter name and phone.'); return; }
+    c.avatar = document.getElementById('modal-contact-avatar').value || '👩';
+    c.name   = name;
+    c.phone  = phone;
+    c.rel    = document.getElementById('modal-contact-rel').value.trim();
+    save(); render(); closeModal();
+  });
+  // Avatar picker needs a tick to render
+  setTimeout(initModalAvatarPicker, 50);
+}
+
+
+
+// ===== PIN LOCK =====
+let pinBuffer      = '';
+let pinMode        = 'unlock';   // 'unlock' | 'setup' | 'change-old' | 'change-new' | 'change-confirm'
+let pinNewTemp     = '';
+let pwUnlocked     = false;
+let pinAutoLockTimer = null;
+
+function getPIN()     { return localStorage.getItem('nudge_pin') || ''; }
+function setPIN(p)    { localStorage.setItem('nudge_pin', p); }
+function hasPIN()     { return !!getPIN(); }
+
+function lockPasswords() {
+  pwUnlocked = false;
+  clearPinAutoLock();
+}
+
+function clearPinAutoLock() {
+  if(pinAutoLockTimer) { clearTimeout(pinAutoLockTimer); pinAutoLockTimer = null; }
+}
+
+function startPinAutoLock() {
+  clearPinAutoLock();
+  // Auto-lock after 2 minutes of being on the passwords tab
+  pinAutoLockTimer = setTimeout(() => {
+    lockPasswords();
+    showPinOverlay();
+  }, 120000);
+}
+
+function showPinOverlay() {
+  const overlay = document.getElementById('pin-overlay');
+  if(!overlay) return;
+  if(pwUnlocked) { overlay.classList.remove('show'); startPinAutoLock(); return; }
+  pinBuffer = '';
+  updatePinDots();
+  if(!hasPIN()) {
+    // First time — set up a PIN
+    pinMode = 'setup';
+    document.getElementById('pin-lock-icon').textContent = '🔑';
+    document.getElementById('pin-title').textContent     = 'Create a PIN';
+    document.getElementById('pin-sub').textContent       = 'Choose a 4-digit PIN to protect your passwords';
+    document.getElementById('pin-change-link').style.display = 'none';
+  } else {
+    pinMode = 'unlock';
+    document.getElementById('pin-lock-icon').textContent = '🔒';
+    document.getElementById('pin-title').textContent     = 'Enter Your PIN';
+    document.getElementById('pin-sub').textContent       = 'Enter your 4-digit PIN to view your passwords';
+    document.getElementById('pin-change-link').style.display = 'inline-block';
+  }
+  document.getElementById('pin-error').textContent = '';
+  overlay.classList.add('show');
+}
+
+function pinKey(key) {
+  const err = document.getElementById('pin-error');
+  if(key === 'back')  { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); return; }
+  if(key === 'clear') { pinBuffer = ''; updatePinDots(); return; }
+  if(pinBuffer.length >= 4) return;
+  pinBuffer += key;
+  updatePinDots();
+  if(pinBuffer.length === 4) {
+    setTimeout(() => handlePinComplete(err), 150);
+  }
+}
+
+function updatePinDots() {
+  for(let i=0;i<4;i++) {
+    const dot = document.getElementById('pd'+i);
+    if(dot) dot.classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+function handlePinComplete(err) {
+  if(pinMode === 'setup') {
+    // First time setup
+    pinNewTemp = pinBuffer;
+    pinBuffer  = '';
+    pinMode    = 'change-confirm';
+    document.getElementById('pin-title').textContent = 'Confirm Your PIN';
+    document.getElementById('pin-sub').textContent   = 'Enter the same 4 digits again to confirm';
+    updatePinDots();
+
+  } else if(pinMode === 'change-confirm') {
+    if(pinBuffer === pinNewTemp) {
+      setPIN(pinBuffer);
+      pwUnlocked = true;
+      pinBuffer  = '';
+      pinNewTemp = '';
+      pinMode    = 'unlock';
+      document.getElementById('pin-error').textContent = '';
+      document.getElementById('pin-overlay').classList.remove('show');
+      startPinAutoLock();
+    } else {
+      err.textContent = 'PINs don&#39;t match — try again';
+      pinBuffer = ''; pinNewTemp = '';
+      pinMode   = 'setup';
+      document.getElementById('pin-title').textContent = 'Create a PIN';
+      document.getElementById('pin-sub').textContent   = 'Choose a 4-digit PIN to protect your passwords';
+      updatePinDots();
+    }
+
+  } else if(pinMode === 'change-old') {
+    if(pinBuffer === getPIN()) {
+      pinBuffer  = '';
+      pinNewTemp = '';
+      pinMode    = 'change-new';
+      document.getElementById('pin-title').textContent = 'Enter New PIN';
+      document.getElementById('pin-sub').textContent   = 'Choose your new 4-digit PIN';
+      err.textContent = '';
+      updatePinDots();
+    } else {
+      err.textContent = 'Incorrect PIN — try again';
+      pinBuffer = '';
+      updatePinDots();
+    }
+
+  } else if(pinMode === 'change-new') {
+    pinNewTemp = pinBuffer;
+    pinBuffer  = '';
+    pinMode    = 'change-confirm';
+    document.getElementById('pin-title').textContent = 'Confirm New PIN';
+    document.getElementById('pin-sub').textContent   = 'Enter the new PIN again to confirm';
+    updatePinDots();
+
+  } else {
+    // Normal unlock
+    if(pinBuffer === getPIN()) {
+      pwUnlocked = true;
+      pinBuffer  = '';
+      document.getElementById('pin-error').textContent = '';
+      document.getElementById('pin-overlay').classList.remove('show');
+      startPinAutoLock();
+    } else {
+      err.textContent = 'Incorrect PIN — try again';
+      pinBuffer = '';
+      updatePinDots();
+    }
+  }
+}
+
+function startChangePIN() {
+  pinBuffer  = '';
+  pinNewTemp = '';
+  pinMode    = 'change-old';
+  document.getElementById('pin-lock-icon').textContent = '🔑';
+  document.getElementById('pin-title').textContent     = 'Enter Current PIN';
+  document.getElementById('pin-sub').textContent       = 'Enter your current PIN first';
+  document.getElementById('pin-error').textContent     = '';
+  document.getElementById('pin-change-link').style.display = 'none';
+  updatePinDots();
+}
+
+// ===== PASSWORDS =====
+if(!data.passwords) data.passwords = [];
+
+function togglePwVis(fieldId, btn) {
+  const el = document.getElementById(fieldId);
+  if(!el) return;
+  if(el.type === 'password') { el.type = 'text';  btn.textContent = '🙈'; }
+  else                       { el.type = 'password'; btn.textContent = '👁️'; }
+}
+
+function addPassword() {
+  const site = document.getElementById('pw-site').value.trim();
+  const user = document.getElementById('pw-user').value.trim();
+  const pass = document.getElementById('pw-pass').value;
+  if(!site || !pass) { alert('Please enter a website/app and a password.'); return; }
+  data.passwords.push({ id:Date.now(), site, user, pass, notes:document.getElementById('pw-notes').value.trim(), visible:false });
+  save();
+  ['pw-site','pw-user','pw-pass','pw-notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  render();
+}
+
+function togglePwItemVis(id) {
+  const p = data.passwords.find(p=>p.id===id);
+  if(p) { p.visible = !p.visible; save(); renderPasswords(); }
+}
+
+function copyPw(id) {
+  const p = data.passwords.find(p=>p.id===id);
+  if(!p) return;
+  navigator.clipboard.writeText(p.pass).then(()=>{
+    const btn = document.getElementById('copy-btn-'+id);
+    if(btn){ const orig=btn.textContent; btn.textContent='✓ Copied!'; setTimeout(()=>btn.textContent=orig,1500); }
+  }).catch(()=>{ alert('Password: '+p.pass); });
+}
+
+function deletePassword(id) {
+  if(confirm('Remove this login?')) { data.passwords=data.passwords.filter(p=>p.id!==id); save(); renderPasswords(); }
+}
+
+function editPassword(id) {
+  const p = data.passwords.find(p=>p.id===id);
+  if(!p) return;
+  openModal('✏️ Edit Login', `
+    <label>Website or App</label>
+    <input type="text" id="modal-pw-site" value="${p.site}">
+    <label>Username or Email</label>
+    <input type="text" id="modal-pw-user" value="${p.user||''}">
+    <label>Password</label>
+    <div style="position:relative">
+      <input type="password" id="modal-pw-pass" value="${p.pass}" style="padding-right:44px">
+      <button type="button" onclick="togglePwVis('modal-pw-pass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer">👁️</button>
+    </div>
+    <label>Notes</label>
+    <input type="text" id="modal-pw-notes" value="${p.notes||''}">
+  `, () => {
+    const site = document.getElementById('modal-pw-site').value.trim();
+    const pass = document.getElementById('modal-pw-pass').value;
+    if(!site||!pass){ alert('Site and password are required.'); return; }
+    p.site  = site;
+    p.user  = document.getElementById('modal-pw-user').value.trim();
+    p.pass  = pass;
+    p.notes = document.getElementById('modal-pw-notes').value.trim();
+    save(); renderPasswords(); closeModal();
+  });
+}
+
+function renderPasswords() {
+  const list = document.getElementById('password-list');
+  if(!list) return;
+  if(!data.passwords || data.passwords.length===0) {
+    list.innerHTML='<div class="empty"><div class="empty-icon">🔑</div>No logins saved yet.</div>'; return;
+  }
+  list.innerHTML = data.passwords.map(p => `
+    <div class="pw-item">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="pw-site">🌐 ${p.site}</div>
+          ${p.user ? `<div class="pw-user">👤 ${p.user}</div>` : ''}
+          ${p.notes ? `<div class="pw-user">📋 ${p.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="edit-btn" onclick="editPassword(${p.id})">✏️</button>
+          <button class="delete-btn" onclick="deletePassword(${p.id})">✕</button>
+        </div>
+      </div>
+      <div class="pw-pass-row">
+        <div class="pw-pass-val">${p.visible ? p.pass : '••••••••'}</div>
+        <button class="pw-reveal-btn" onclick="togglePwItemVis(${p.id})">${p.visible?'🙈':'👁️'}</button>
+        <button class="pw-copy-btn" id="copy-btn-${p.id}" onclick="copyPw(${p.id})">📋 Copy</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== WORD SORT GAME =====
+const WORDSORT_BANK = [
+  { cat:'🍎 Fruits', correct:['Apple','Mango','Grape','Peach','Lemon'], distractors:['Carrot','Potato','Broccoli','Onion'] },
+  { cat:'🐾 Animals', correct:['Dog','Elephant','Lion','Eagle','Salmon'], distractors:['Chair','Hammer','Cloud','River'] },
+  { cat:'🌍 Countries', correct:['France','Brazil','Japan','Egypt','Canada'], distractors:['London','Paris','Tokyo','Amazon'] },
+  { cat:'🎵 Musical Instruments', correct:['Piano','Violin','Trumpet','Guitar','Drums'], distractors:['Painting','Statue','Canvas','Pencil'] },
+  { cat:'🏅 Sports', correct:['Hockey','Tennis','Swimming','Golf','Boxing'], distractors:['Cooking','Reading','Sleeping','Driving'] },
+  { cat:'🌸 Flowers', correct:['Rose','Tulip','Daisy','Orchid','Lily'], distractors:['Oak','Pine','Maple','Cactus'] },
+  { cat:'🍳 Things in a Kitchen', correct:['Stove','Fridge','Blender','Spatula','Toaster'], distractors:['Hammer','Shovel','Ladder','Wrench'] },
+  { cat:'☁️ Weather Words', correct:['Sunny','Cloudy','Foggy','Windy','Snowy'], distractors:['Happy','Salty','Heavy','Quiet'] },
+  { cat:'🎨 Colours', correct:['Crimson','Turquoise','Violet','Amber','Ivory'], distractors:['Fluffy','Noisy','Bitter','Smooth'] },
+  { cat:'🏙️ Canadian Cities', correct:['Edmonton','Calgary','Toronto','Vancouver','Ottawa'], distractors:['Seattle','Denver','Boston','Houston'] },
+];
+let wsScore=0, wsTotal=0, wsUsed=[], wsAnswered=false, wsCurrentCorrect=[];
+
+function loadWordSort() {
+  wsAnswered = false;
+  let avail = WORDSORT_BANK.filter((_,i)=>!wsUsed.includes(i));
+  if(avail.length===0){ wsUsed=[]; avail=[...WORDSORT_BANK]; }
+  const pick = avail[Math.floor(Math.random()*avail.length)];
+  wsUsed.push(WORDSORT_BANK.indexOf(pick));
+  wsCurrentCorrect = pick.correct;
+  // Pick 3 correct + 3 distractors, shuffle
+  const shown = [...pick.correct.sort(()=>Math.random()-0.5).slice(0,4),
+                  ...pick.distractors.sort(()=>Math.random()-0.5).slice(0,3)]
+                  .sort(()=>Math.random()-0.5);
+  document.getElementById('wordsort-area').innerHTML = `
+    <div style="font-size:15px;font-weight:700;color:var(--text-mid);margin-bottom:10px">Tap all the <strong style="color:var(--text-dark)">${pick.cat}</strong> words:</div>
+    <div id="ws-words">${shown.map(w=>`<span class="wordsort-word" onclick="toggleWsWord(this,'${w}')">${w}</span>`).join('')}</div>
+    <button onclick="checkWordSort()" style="margin-top:12px;background:var(--rose);color:white;border:none;border-radius:12px;padding:11px 20px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer">✓ Check My Answers</button>
+  `;
+  document.getElementById('wordsort-score').textContent = wsTotal>0 ? `Score: ${wsScore} / ${wsTotal}` : '';
+}
+
+function toggleWsWord(el, word) {
+  if(wsAnswered) return;
+  el.classList.toggle('selected');
+}
+
+function checkWordSort() {
+  if(wsAnswered) return;
+  wsAnswered = true; wsTotal++;
+  const selected = [...document.querySelectorAll('.wordsort-word.selected')].map(el=>el.textContent);
+  let allCorrect = true;
+  document.querySelectorAll('.wordsort-word').forEach(el => {
+    const w = el.textContent;
+    const isCorrect = wsCurrentCorrect.includes(w);
+    const isSelected = el.classList.contains('selected');
+    if(isCorrect && isSelected)  { el.classList.add('correct'); el.classList.remove('selected'); }
+    else if(isCorrect && !isSelected) { el.classList.add('missed'); allCorrect=false; }
+    else if(!isCorrect && isSelected) { el.classList.add('wrong');  el.classList.remove('selected'); allCorrect=false; }
+  });
+  if(allCorrect) wsScore++;
+  document.getElementById('wordsort-score').textContent = `Score: ${wsScore} / ${wsTotal}`;
+  setTimeout(loadWordSort, 2200);
+}
+
+// ===== TRUE OR FALSE GAME =====
+const TF_BANK = [
+  { s:'The Great Wall of China is visible from space.', a:false },
+  { s:'Canada has more lakes than any other country.', a:true },
+  { s:'A group of flamingos is called a flamboyance.', a:true },
+  { s:'Diamonds are made of compressed coal.', a:false },
+  { s:'The human body has 206 bones.', a:true },
+  { s:'Lightning never strikes the same place twice.', a:false },
+  { s:'Honey never spoils — it lasts thousands of years.', a:true },
+  { s:'The Amazon River is the longest river in the world.', a:false },
+  { s:'A snail can sleep for up to 3 years.', a:true },
+  { s:'Mount Everest is the tallest mountain on Earth.', a:true },
+  { s:'Bulls are attracted to the colour red.', a:false },
+  { s:'Elephants are the only animals that cannot jump.', a:false },
+  { s:'The sun is a star.', a:true },
+  { s:'Bananas are technically berries.', a:true },
+  { s:'Glass is made from sand.', a:true },
+  { s:'A day on Venus is shorter than a year on Venus.', a:false },
+  { s:'Octopuses have three hearts.', a:true },
+  { s:'The capital of Australia is Sydney.', a:false },
+  { s:'Humans share 50% of their DNA with bananas.', a:true },
+  { s:'The Pacific Ocean is larger than all land on Earth combined.', a:true },
+  { s:'Penguins live in the Arctic.', a:false },
+  { s:'A group of crows is called a murder.', a:true },
+  { s:'The Eiffel Tower was built in Canada.', a:false },
+  { s:'Water boils at 100 degrees Celsius at sea level.', a:true },
+  { s:'Fish can drown.', a:true },
+];
+let tfScore=0, tfTotal=0, tfUsed=[], tfAnswered=false;
+
+function loadTrueFalse() {
+  tfAnswered = false;
+  let avail = TF_BANK.filter((_,i)=>!tfUsed.includes(i));
+  if(avail.length===0){ tfUsed=[]; avail=[...TF_BANK]; }
+  const idx = TF_BANK.indexOf(avail[Math.floor(Math.random()*avail.length)]);
+  tfUsed.push(idx);
+  const item = TF_BANK[idx];
+  document.getElementById('trufalse-area').innerHTML = `
+    <div class="tf-statement">${item.s}</div>
+    <div class="tf-btns">
+      <button class="tf-btn" onclick="answerTF(this, true, ${item.a})">✅ True</button>
+      <button class="tf-btn" onclick="answerTF(this, false, ${item.a})">❌ False</button>
+    </div>
+  `;
+  document.getElementById('trufalse-score').textContent = tfTotal>0 ? `Score: ${tfScore} / ${tfTotal}` : '';
+}
+
+function answerTF(btn, chosen, correct) {
+  if(tfAnswered) return;
+  tfAnswered=true; tfTotal++;
+  document.querySelectorAll('.tf-btn').forEach(b=>{ b.disabled=true; });
+  // Highlight correct answer
+  document.querySelectorAll('.tf-btn').forEach(b=>{
+    const isTrue = b.textContent.includes('True');
+    if(isTrue === correct) b.classList.add('correct');
+  });
+  if(chosen === correct) { tfScore++; btn.classList.add('correct'); }
+  else btn.classList.add('wrong');
+  document.getElementById('trufalse-score').textContent = `Score: ${tfScore} / ${tfTotal}`;
+  setTimeout(loadTrueFalse, 1800);
+}
+
+// ===== NUMBER SEQUENCE GAME =====
+const SEQ_PATTERNS = [
+  ()=>{ const s=Math.floor(Math.random()*5)+1,d=Math.floor(Math.random()*5)+2; return {seq:[s,s+d,s+2*d,s+3*d],ans:s+4*d,desc:'add '+d}; },
+  ()=>{ const s=Math.floor(Math.random()*3)+2,m=Math.floor(Math.random()*2)+2; return {seq:[s,s*m,s*m*m,s*m*m*m],ans:s*m*m*m*m,desc:'multiply'}; },
+  ()=>{ const s=100+Math.floor(Math.random()*50)*2,d=Math.floor(Math.random()*8)+3; return {seq:[s,s-d,s-2*d,s-3*d],ans:s-4*d,desc:'subtract '+d}; },
+  ()=>{ const s=Math.floor(Math.random()*4)+2; return {seq:[s,s+1,s+3,s+6],ans:s+10,desc:'triangular'}; },
+  ()=>{ const n=Math.floor(Math.random()*6)+2; return {seq:[n*1,n*2,n*3,n*4],ans:n*5,desc:'times table '+n}; },
+];
+let seqScore=0, seqTotal=0, seqAnswered=false;
+
+function loadSequence() {
+  seqAnswered = false;
+  const pattern = SEQ_PATTERNS[Math.floor(Math.random()*SEQ_PATTERNS.length)]();
+  const ans = pattern.ans;
+  const wrongs = new Set();
+  while(wrongs.size<3){ const w=ans+Math.floor(Math.random()*16)-8; if(w!==ans&&w>0) wrongs.add(w); }
+  const opts = [ans,...wrongs].sort(()=>Math.random()-0.5);
+  document.getElementById('sequence-area').innerHTML = `
+    <div class="seq-display">${pattern.seq.join('  ,  ')}  ,  <span style="color:var(--warm-orange)">?</span></div>
+    <div class="seq-options">${opts.map(o=>`<button class="seq-opt" onclick="answerSeq(this,${o},${ans})">${o}</button>`).join('')}</div>
+  `;
+  document.getElementById('sequence-score').textContent = seqTotal>0 ? `Score: ${seqScore} / ${seqTotal}` : '';
+}
+
+function answerSeq(btn, chosen, correct) {
+  if(seqAnswered) return;
+  seqAnswered=true; seqTotal++;
+  document.querySelectorAll('.seq-opt').forEach(b=>{ b.disabled=true; if(parseInt(b.textContent)===correct) b.classList.add('correct'); });
+  if(chosen===correct) { seqScore++; btn.classList.add('correct'); }
+  else btn.classList.add('wrong');
+  document.getElementById('sequence-score').textContent = `Score: ${seqScore} / ${seqTotal}`;
+  setTimeout(loadSequence, 1600);
+}
+
+
+
+// ===== DAILY POSITIVITY =====
+const POSITIVITY_QUOTES = [
+  "Every day may not be good, but there is something good in every day. 🌸",
+  "You are never too old to set another goal or dream a new dream. ⭐",
+  "Small steps every day lead to big changes over time. Keep going! 🌱",
+  "Your smile is a gift to everyone around you. 😊",
+  "Today is a perfect day to appreciate how far you've come. 🎉",
+  "You bring something unique and wonderful to this world. 💛",
+  "A kind word from you can brighten someone's whole day. 🌼",
+  "Experience and wisdom are treasures that only grow with time. 🏆",
+  "The best time to enjoy a beautiful moment is right now. 🌅",
+  "You are loved, you are valued, and you matter. ❤️",
+  "Every morning is a new chance to do something wonderful. ☀️",
+  "Laughter and joy are good medicine — enjoy plenty today! 😄",
+  "The memories you carry are a testament to a life well-lived. 📖",
+  "Even on quiet days, your presence makes a difference. 🌿",
+  "Curiosity keeps the mind young — keep asking questions! 🔍",
+];
+
+function loadPositivity() {
+  const el = document.getElementById('daily-positivity');
+  if(!el) return;
+  // Use day of year so it changes daily but stays same all day
+  const now = new Date();
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+  el.textContent = POSITIVITY_QUOTES[dayOfYear % POSITIVITY_QUOTES.length];
+}
+
+// ===== ASK AI ANYTHING =====
+const NUDGE_AI_KEY = 'REPLACE_WITH_YOUR_API_KEY';
+
+async function askAI() {
+  const input = document.getElementById('ai-question-input');
+  const answerArea = document.getElementById('ai-answer-area');
+  if(!input || !answerArea) return;
+  const question = input.value.trim();
+  if(!question) return;
+
+  answerArea.innerHTML = `<div style="text-align:center;padding:12px;color:var(--text-mid);font-size:14px">🤔 Thinking...</div>`;
+  input.disabled = true;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': NUDGE_AI_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: 'You are a warm, friendly assistant in a senior wellness app called Nudge. Answer questions clearly and simply, using plain language. Keep answers to 3-4 sentences maximum. Be encouraging and positive.',
+        messages: [{ role: 'user', content: question }]
+      })
+    });
+    const data = await response.json();
+    const answer = data.content?.[0]?.text || 'Sorry, I could not get an answer just now. Please try again!';
+    answerArea.innerHTML = `
+      <div style="background:#F5F0FF;border-radius:14px;padding:14px 16px;margin-top:4px">
+        <div style="font-size:13px;color:var(--lavender);font-weight:800;margin-bottom:6px">✨ Answer</div>
+        <div style="font-size:15px;color:var(--text-dark);line-height:1.6;font-weight:600">${answer.split(String.fromCharCode(10)).join('<br>')}</div>
+      </div>`;
+    input.value = '';
+  } catch(err) {
+    answerArea.innerHTML = `<div style="color:var(--rose);font-size:14px;padding:8px">Something went wrong. Please check your connection and try again.</div>`;
+  }
+  input.disabled = false;
+}
+
+// ===== DIFFICULTY SYSTEM =====
+let gameDifficulty = localStorage.getItem('nudge_difficulty') || 'easy';
+
+function setDifficulty(level) {
+  gameDifficulty = level;
+  localStorage.setItem('nudge_difficulty', level);
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('diff-' + level).classList.add('active');
+  const descs = {
+    easy:   'Simple, relaxing games — great for a quick mental break.',
+    medium: 'A good challenge — keeps the mind sharp and engaged.',
+    hard:   'Tough puzzles for those who love a real brain workout!'
+  };
+  document.getElementById('diff-desc').textContent = descs[level];
+  document.querySelectorAll('.diff-easy, .diff-medium, .diff-hard').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.diff-' + level).forEach(el => el.classList.add('show'));
+  // Start games for the level
+  if(level === 'easy')   { loadFact(); loadTrueFalse(); loadWordSort(); startMemory(); loadMath(); startCrosswordEasy(); }
+  if(level === 'medium') { loadTrivia(); startScramble(); startSpelling(); loadSequence(); startCrossword(); }
+  if(level === 'hard')   { loadTriviaHard(); loadMathHard(); startScrambleHard(); startCrosswordHard(); startMemoryHard(); }
+}
+
+function initDifficulty() {
+  const level = gameDifficulty;
+  document.querySelectorAll('.diff-easy, .diff-medium, .diff-hard').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.diff-' + level).forEach(el => el.classList.add('show'));
+  document.getElementById('diff-' + level).classList.add('active');
+  const descs = {
+    easy:   'Simple, relaxing games — great for a quick mental break.',
+    medium: 'A good challenge — keeps the mind sharp and engaged.',
+    hard:   'Tough puzzles for those who love a real brain workout!'
+  };
+  document.getElementById('diff-desc').textContent = descs[level];
+}
+
+// ===== INTERESTING FACTS =====
+const FACTS = [
+  { fact: "Honey never spoils. Archaeologists have found 3,000-year-old honey in Egyptian tombs that was still perfectly edible.", src: "Smithsonian Magazine" },
+  { fact: "A group of flamingos is called a 'flamboyance.' They get their pink colour from the food they eat — shrimp and algae.", src: "National Geographic" },
+  { fact: "Canada has more lakes than the rest of the world combined — over 60% of the world's lakes are in Canada.", src: "Natural Resources Canada" },
+  { fact: "Octopuses have three hearts and blue blood. Two hearts pump blood to the gills, and one pumps it to the rest of the body.", src: "Ocean Conservancy" },
+  { fact: "Bananas are technically berries, but strawberries are not. Botanically, a berry must develop from a single flower with one ovary.", src: "Britannica" },
+  { fact: "The Eiffel Tower grows about 15 cm taller in summer because heat causes the iron to expand.", src: "Science Museum UK" },
+  { fact: "A day on Venus is longer than a year on Venus. It rotates so slowly that it takes 243 Earth days to spin once.", src: "NASA" },
+  { fact: "Crows can recognize human faces and hold grudges. They've been known to warn other crows about specific people they distrust.", src: "University of Washington" },
+  { fact: "The shortest war in history lasted only 38 to 45 minutes — the Anglo-Zanzibar War of 1896.", src: "History.com" },
+  { fact: "Sea otters hold hands while sleeping so they don't drift apart. This is called a 'raft.'", src: "Monterey Bay Aquarium" },
+  { fact: "Wombat droppings are cube-shaped — the only animal in the world known to produce cubic feces, which helps them mark territory.", src: "Science Magazine" },
+  { fact: "The Great Wall of China is not visible from space with the naked eye — this is a common myth disproven by astronauts.", src: "NASA" },
+  { fact: "Cleopatra lived closer in time to the Moon landing than to the construction of the Great Pyramid.", src: "History Channel" },
+  { fact: "A bolt of lightning is five times hotter than the surface of the sun — about 30,000 Kelvin.", src: "NOAA" },
+  { fact: "Trees can communicate with each other through underground fungal networks, sometimes called the 'Wood Wide Web.'", src: "Scientific American" },
+  { fact: "Oxford University is older than the Aztec Empire. Teaching at Oxford began in 1096; the Aztec Empire was founded in 1428.", src: "Oxford University" },
+  { fact: "Sharks are older than trees. Sharks have existed for about 450 million years, while trees only appeared about 350 million years ago.", src: "Natural History Museum" },
+  { fact: "The human body contains enough iron to make a small nail — about 3 to 4 grams.", src: "Harvard Health" },
+  { fact: "A snail can sleep for up to three years if conditions are not right for it to be active.", src: "BBC Science" },
+  { fact: "Penguins propose to their mates with pebbles. A male penguin searches for the perfect pebble to present to his chosen partner.", src: "Smithsonian Zoo" },
+  { fact: "The dot over the letters 'i' and 'j' is called a 'tittle.'", src: "Merriam-Webster" },
+  { fact: "Finland has more saunas than cars. With 5.5 million people and over 3 million saunas, it is deeply part of the culture.", src: "Visit Finland" },
+  { fact: "Butterflies taste with their feet — they have taste sensors on their legs to help identify plants.", src: "Butterfly Conservation" },
+  { fact: "The word 'quiz' has no known origin. It appeared suddenly in Dublin around 1791 and nobody knows where it came from.", src: "Oxford English Dictionary" },
+  { fact: "Polar bears have black skin under their white fur, which helps absorb heat from the sun to keep them warm.", src: "WWF" },
+];
+let factUsed = [];
+function loadFact() {
+  let avail = FACTS.filter((_,i) => !factUsed.includes(i));
+  if(!avail.length) { factUsed = []; avail = [...FACTS]; }
+  const idx = FACTS.indexOf(avail[Math.floor(Math.random()*avail.length)]);
+  factUsed.push(idx);
+  const f = FACTS[idx];
+  const area = document.getElementById('facts-area');
+  if(area) area.innerHTML = `<div class="fact-card">💡 ${f.fact}</div><div class="fact-source">Source: ${f.src}</div>`;
+}
+
+// ===== HARD TRIVIA =====
+const TRIVIA_HARD = [
+  { q:"What is the chemical symbol for gold?", opts:["Au","Ag","Fe","Gd"], a:0 },
+  { q:"Which planet has the most moons?", opts:["Jupiter","Saturn","Uranus","Neptune"], a:1 },
+  { q:"In what year did World War I begin?", opts:["1912","1914","1916","1918"], a:1 },
+  { q:"What is the longest bone in the human body?", opts:["Tibia","Fibula","Femur","Humerus"], a:2 },
+  { q:"Who wrote 'Pride and Prejudice'?", opts:["Charlotte Brontë","Jane Austen","Mary Shelley","George Eliot"], a:1 },
+  { q:"What is the capital of Australia?", opts:["Sydney","Melbourne","Brisbane","Canberra"], a:3 },
+  { q:"Which element has the atomic number 1?", opts:["Helium","Oxygen","Hydrogen","Carbon"], a:2 },
+  { q:"The Battle of Hastings was fought in which year?", opts:["1042","1066","1099","1215"], a:1 },
+  { q:"What is the square root of 144?", opts:["11","12","13","14"], a:1 },
+  { q:"Which country has the longest coastline in the world?", opts:["Russia","USA","Australia","Canada"], a:3 },
+  { q:"What gas makes up approximately 78% of Earth's atmosphere?", opts:["Oxygen","Carbon dioxide","Nitrogen","Argon"], a:2 },
+  { q:"Who painted the Sistine Chapel ceiling?", opts:["Leonardo da Vinci","Raphael","Michelangelo","Botticelli"], a:2 },
+  { q:"What is the powerhouse of the cell?", opts:["Nucleus","Ribosome","Mitochondria","Vacuole"], a:2 },
+  { q:"The Treaty of Versailles ended which war?", opts:["World War II","The Crimean War","The Boer War","World War I"], a:3 },
+  { q:"What is the hardest natural substance on Earth?", opts:["Gold","Iron","Diamond","Quartz"], a:2 },
+];
+let triviaHardScore=0, triviaHardTotal=0, triviaHardUsed=[], triviaHardAnswered=false;
+
+function loadTriviaHard() {
+  triviaHardAnswered = false;
+  let avail = TRIVIA_HARD.filter((_,i)=>!triviaHardUsed.includes(i));
+  if(!avail.length){ triviaHardUsed=[]; avail=[...TRIVIA_HARD]; }
+  const item = avail[Math.floor(Math.random()*avail.length)];
+  triviaHardUsed.push(TRIVIA_HARD.indexOf(item));
+  const area = document.getElementById('trivia-hard-area');
+  if(!area) return;
+  area.innerHTML = `
+    <div style="font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:14px;line-height:1.5">${item.q}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${item.opts.map((o,i)=>`<button class="trivia-hard-option" onclick="answerTriviaHard(this,${i},${item.a})"
+        style="padding:12px;border:2px solid #E8D5C4;border-radius:12px;background:white;
+               font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-align:left">${o}</button>`).join('')}
+    </div>`;
+  document.getElementById('trivia-hard-score').textContent = triviaHardTotal>0?`Score: ${triviaHardScore} / ${triviaHardTotal}`:'';
+}
+
+function answerTriviaHard(btn, chosen, correct) {
+  if(triviaHardAnswered) return;
+  triviaHardAnswered=true; triviaHardTotal++;
+  document.querySelectorAll('.trivia-hard-option').forEach((b,i)=>{
+    b.disabled=true;
+    if(i===correct) b.style.background='#DFF2E4';
+  });
+  if(chosen===correct){ triviaHardScore++; btn.style.background='#DFF2E4'; }
+  else btn.style.background='#F9E0E6';
+  document.getElementById('trivia-hard-score').textContent=`Score: ${triviaHardScore} / ${triviaHardTotal}`;
+  setTimeout(loadTriviaHard, 1800);
+}
+
+// ===== HARD MATH =====
+let mathHardScore=0, mathHardTotal=0, mathHardAnswered=false;
+function loadMathHard() {
+  mathHardAnswered=false;
+  const types = ['multiply','divide','multi-step','percent'];
+  const type = types[Math.floor(Math.random()*types.length)];
+  let q='', ans=0;
+  if(type==='multiply'){ const a=Math.floor(Math.random()*12)+3,b=Math.floor(Math.random()*12)+3; q=`${a} × ${b} = ?`; ans=a*b; }
+  else if(type==='divide'){ const b=Math.floor(Math.random()*9)+2,ans2=Math.floor(Math.random()*10)+2; ans=ans2; q=`${b*ans2} ÷ ${b} = ?`; }
+  else if(type==='multi-step'){ const a=Math.floor(Math.random()*10)+2,b=Math.floor(Math.random()*5)+2,c=Math.floor(Math.random()*10)+1; ans=a*b+c; q=`(${a} × ${b}) + ${c} = ?`; }
+  else { const base=Math.floor(Math.random()*8+2)*10, pct=[10,20,25,50][Math.floor(Math.random()*4)]; ans=base*pct/100; q=`${pct}% of ${base} = ?`; }
+  const wrongs=new Set(); while(wrongs.size<3){const w=ans+Math.floor(Math.random()*10)-5; if(w!==ans&&w>0)wrongs.add(w);}
+  const opts=[ans,...wrongs].sort(()=>Math.random()-0.5);
+  const area=document.getElementById('math-hard-area');
+  if(!area)return;
+  area.innerHTML=`<div style="font-size:22px;font-weight:800;text-align:center;margin-bottom:14px;color:var(--text-dark)">${q}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${opts.map(o=>`<button class="math-hard-opt" onclick="answerMathHard(this,${o},${ans})"
+        style="padding:14px;border:2px solid #E8D5C4;border-radius:12px;background:white;font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;cursor:pointer">${o}</button>`).join('')}
+    </div>`;
+  document.getElementById('math-hard-score').textContent=mathHardTotal>0?`Score: ${mathHardScore} / ${mathHardTotal}`:'';
+}
+
+function answerMathHard(btn,chosen,correct){
+  if(mathHardAnswered)return;
+  mathHardAnswered=true;mathHardTotal++;
+  document.querySelectorAll('.math-hard-opt').forEach(b=>{b.disabled=true;if(parseInt(b.textContent)===correct)b.style.background='#DFF2E4';});
+  if(chosen===correct){mathHardScore++;btn.style.background='#DFF2E4';}else btn.style.background='#F9E0E6';
+  document.getElementById('math-hard-score').textContent=`Score: ${mathHardScore} / ${mathHardTotal}`;
+  setTimeout(loadMathHard,1600);
+}
+
+// ===== HARD WORD SCRAMBLE =====
+const SCRAMBLE_HARD_WORDS = [
+  {word:'MAGNIFICENT',hint:'Impressively beautiful or elaborate'},
+  {word:'PHILANTHROPY',hint:'Charitable giving to help others'},
+  {word:'ARCHITECTURE',hint:'The art of designing buildings'},
+  {word:'ENCYCLOPEDIA',hint:'A reference book of knowledge'},
+  {word:'ということ',hint:'A tricky one — try VOCABULARY: knowledge of words'},
+  {word:'VOCABULARY',hint:'The words known by a person'},
+  {word:'ARCHAEOLOGY',hint:'The study of ancient civilizations'},
+  {word:'BUREAUCRACY',hint:'A system of complex rules and procedures'},
+  {word:'CONTRADICTED',hint:'Spoken against or denied'},
+  {word:'EXAGGERATION',hint:'Making something seem larger than it is'},
+  {word:'FLUORESCENT',hint:'Bright glowing light'},
+  {word:'HYPOCRITICAL',hint:'Saying one thing but doing another'},
+  {word:'INDEPENDENCE',hint:'Freedom from outside control'},
+  {word:'JUXTAPOSITION',hint:'Placing two things side by side for contrast'},
+  {word:'KNOWLEDGEABLE',hint:'Having a lot of information or skill'},
+];
+let scrambleHardUsed=[], scrambleHardAnswer='';
+
+function startScrambleHard() {
+  let avail = SCRAMBLE_HARD_WORDS.filter((_,i)=>!scrambleHardUsed.includes(i));
+  if(!avail.length){scrambleHardUsed=[];avail=[...SCRAMBLE_HARD_WORDS];}
+  const pick = avail[Math.floor(Math.random()*avail.length)];
+  scrambleHardUsed.push(SCRAMBLE_HARD_WORDS.indexOf(pick));
+  scrambleHardAnswer = pick.word;
+  const scrambled = pick.word.split('').sort(()=>Math.random()-0.5).join('');
+  const area = document.getElementById('scramble-hard-area');
+  if(!area)return;
+  area.innerHTML=`
+    <div style="font-size:13px;color:var(--text-mid);margin-bottom:6px">Hint: ${pick.hint}</div>
+    <div style="font-size:24px;font-weight:800;letter-spacing:4px;text-align:center;margin-bottom:14px;color:var(--warm-orange)">${scrambled}</div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="scramble-hard-input" placeholder="Your answer..." onkeydown="if(event.key==='Enter')checkScrambleHard()"
+        style="flex:1;padding:12px;border:2px solid #E8D5C4;border-radius:12px;font-family:'Nunito',sans-serif;font-size:16px;text-transform:uppercase">
+      <button onclick="checkScrambleHard()" style="background:var(--soft-green);color:white;border:none;border-radius:12px;padding:12px 18px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer">✓</button>
+    </div>
+    <div id="scramble-hard-fb" style="margin-top:10px;min-height:22px;font-size:14px;font-weight:700;text-align:center"></div>`;
+  document.getElementById('scramble-hard-next-btn').style.display='none';
+}
+
+function checkScrambleHard(){
+  const inp=document.getElementById('scramble-hard-input');
+  const fb=document.getElementById('scramble-hard-fb');
+  if(!inp||!fb)return;
+  if(inp.value.trim().toUpperCase()===scrambleHardAnswer){
+    fb.style.color='#2D6B40'; fb.textContent='🎉 Correct! Well done!';
+    document.getElementById('scramble-hard-next-btn').style.display='inline-flex';
+    document.querySelectorAll('#scramble-hard-area input,#scramble-hard-area button').forEach(b=>b.disabled=true);
+  } else {
+    fb.style.color='var(--rose)'; fb.textContent='Not quite — try again!';
+  }
+}
+
+// ===== CROSSWORD ENGINE =====
+// Puzzles can be any size — just provide answers grid (# = black cell)
+// Numbers are computed automatically
+
+// Crossword puzzle format:
+// answers: 2D grid array ('#' = black)
+// words: array of {word, clue, dir:'across'|'down', r, c}
+// The renderer auto-numbers cells and matches clues to numbers.
+
+const CROSSWORDS_EASY = [
+  { // 5x5: HELLO/HUMOR/MONEY across, LEMON down
+    answers:[
+      ['H','E','L','L','O'],
+      ['#','#','E','#','#'],
+      ['H','U','M','O','R'],
+      ['#','#','O','#','#'],
+      ['M','O','N','E','Y'],
+    ],
+    words:[
+      {word:'HELLO', clue:'A friendly greeting',                              dir:'across', r:0, c:0},
+      {word:'LEMON', clue:'A yellow citrus fruit with a sour taste',          dir:'down',   r:0, c:2},
+      {word:'HUMOR', clue:'Funny; makes you laugh',                           dir:'across', r:2, c:0},
+      {word:'MONEY', clue:'What you earn from work',                          dir:'across', r:4, c:0},
+    ]
+  },
+  { // 5x5: AFTER/ANGEL/PARTY across, TIGER down
+    answers:[
+      ['A','F','T','E','R'],
+      ['#','#','I','#','#'],
+      ['A','N','G','E','L'],
+      ['#','#','E','#','#'],
+      ['P','A','R','T','Y'],
+    ],
+    words:[
+      {word:'AFTER', clue:'Following in time — the day ___ tomorrow',         dir:'across', r:0, c:0},
+      {word:'TIGER', clue:'A large orange-and-black striped wild cat',        dir:'down',   r:0, c:2},
+      {word:'ANGEL', clue:'A heavenly messenger with wings',                  dir:'across', r:2, c:0},
+      {word:'PARTY', clue:'A celebration with friends',                       dir:'across', r:4, c:0},
+    ]
+  },
+  { // 5x5: FACTS/STONE/OLDER across, CLOUD down
+    answers:[
+      ['F','A','C','T','S'],
+      ['#','#','L','#','#'],
+      ['S','T','O','N','E'],
+      ['#','#','U','#','#'],
+      ['O','L','D','E','R'],
+    ],
+    words:[
+      {word:'FACTS', clue:'True pieces of information',                       dir:'across', r:0, c:0},
+      {word:'CLOUD', clue:'A fluffy white or grey shape floating in the sky', dir:'down',   r:0, c:2},
+      {word:'STONE', clue:'A hard rock; used to build castles',               dir:'across', r:2, c:0},
+      {word:'OLDER', clue:'More advanced in age; the opposite of younger',    dir:'across', r:4, c:0},
+    ]
+  },
+  { // 6x4 varied: two crossing words in a cross shape
+    answers:[
+      ['#','S','#','#'],
+      ['T','H','U','M','B'],
+      ['#','I','#','#'],
+      ['#','N','#','#'],
+      ['#','E','#','#'],
+    ],
+    words:[
+      {word:'THUMB',  clue:'The shortest, widest finger on your hand',        dir:'across', r:1, c:0},
+      {word:'SHINE',  clue:'To glow with light; what the sun does',           dir:'down',   r:0, c:1},
+    ]
+  },
+  { // 5x5: ELBOW/SNARE/STEED across, BRAVE down
+    answers:[
+      ['E','L','B','O','W'],
+      ['#','#','R','#','#'],
+      ['S','N','A','R','E'],
+      ['#','#','V','#','#'],
+      ['S','T','E','E','D'],
+    ],
+    words:[
+      {word:'ELBOW', clue:'The joint in the middle of your arm',              dir:'across', r:0, c:0},
+      {word:'BRAVE', clue:'Showing courage in the face of danger',            dir:'down',   r:0, c:2},
+      {word:'SNARE', clue:'A trap; to catch something with a loop',           dir:'across', r:2, c:0},
+      {word:'STEED', clue:'A horse, especially a fast or noble one',          dir:'across', r:4, c:0},
+    ]
+  },
+];
+
+const CROSSWORDS_MEDIUM = [
+  { // 5x5: APPLE/PLANE/STOOD across, PIANO down
+    answers:[
+      ['A','P','P','L','E'],
+      ['#','#','I','#','#'],
+      ['P','L','A','N','E'],
+      ['#','#','N','#','#'],
+      ['S','T','O','O','D'],
+    ],
+    words:[
+      {word:'APPLE', clue:'A common red or green fruit',                      dir:'across', r:0, c:0},
+      {word:'PIANO', clue:'A large keyboard instrument with black and white keys', dir:'down', r:0, c:2},
+      {word:'PLANE', clue:'A flat surface; also an aircraft',                 dir:'across', r:2, c:0},
+      {word:'STOOD', clue:'Past tense of stand',                              dir:'across', r:4, c:0},
+    ]
+  },
+  { // 5x5: BREAD/TOGAS/STEAK across, EAGLE down
+    answers:[
+      ['B','R','E','A','D'],
+      ['#','#','A','#','#'],
+      ['T','O','G','A','S'],
+      ['#','#','L','#','#'],
+      ['S','T','E','A','K'],
+    ],
+    words:[
+      {word:'BREAD', clue:'Baked loaf sliced for sandwiches',                 dir:'across', r:0, c:0},
+      {word:'EAGLE', clue:'A large bird of prey — national symbol of the USA',dir:'down',   r:0, c:2},
+      {word:'TOGAS', clue:'Ancient Roman draped garments (plural)',            dir:'across', r:2, c:0},
+      {word:'STEAK', clue:'A thick cut of grilled beef',                      dir:'across', r:4, c:0},
+    ]
+  },
+  { // 7x5 wider: two down words RAINY + GOOSE
+    answers:[
+      ['S','P','R','I','N','G','#'],
+      ['#','#','A','#','#','O','#'],
+      ['O','P','I','N','I','O','N'],
+      ['#','#','N','#','#','S','#'],
+      ['B','A','Y','O','N','E','T'],
+    ],
+    words:[
+      {word:'SPRING',  clue:'The season after winter; also to jump suddenly', dir:'across', r:0, c:0},
+      {word:'RAINY',   clue:'Wet weather; lots of rain falling',              dir:'down',   r:0, c:2},
+      {word:'GOOSE',   clue:'A large water bird with a long neck',            dir:'down',   r:0, c:5},
+      {word:'OPINION', clue:'A personal view or belief',                      dir:'across', r:2, c:0},
+      {word:'BAYONET', clue:'A blade attached to the end of a rifle',         dir:'across', r:4, c:0},
+    ]
+  },
+];
+
+const CROSSWORDS_HARD = [
+  { // 5x5: YACHT/LYRIC/PROXY across, CARGO down
+    answers:[
+      ['Y','A','C','H','T'],
+      ['#','#','A','#','#'],
+      ['L','Y','R','I','C'],
+      ['#','#','G','#','#'],
+      ['P','R','O','X','Y'],
+    ],
+    words:[
+      {word:'YACHT',  clue:'A sailing or motor boat used for pleasure',       dir:'across', r:0, c:0},
+      {word:'CARGO',  clue:'Goods carried on a ship, aircraft, or vehicle',   dir:'down',   r:0, c:2},
+      {word:'LYRIC',  clue:'The words of a song; relating to poetry',         dir:'across', r:2, c:0},
+      {word:'PROXY',  clue:'A person authorized to act on behalf of another', dir:'across', r:4, c:0},
+    ]
+  },
+  { // 5x5: FORCE/ORBIT/LUNAR across, ROBIN down
+    answers:[
+      ['F','O','R','C','E'],
+      ['#','#','O','#','#'],
+      ['O','R','B','I','T'],
+      ['#','#','I','#','#'],
+      ['L','U','N','A','R'],
+    ],
+    words:[
+      {word:'FORCE',  clue:'Strength or power; to make someone do something', dir:'across', r:0, c:0},
+      {word:'ROBIN',  clue:'A small bird with a distinctive red or orange breast', dir:'down', r:0, c:2},
+      {word:'ORBIT',  clue:'The path a planet or satellite takes around another body', dir:'across', r:2, c:0},
+      {word:'LUNAR',  clue:'Relating to the moon',                            dir:'across', r:4, c:0},
+    ]
+  },
+  { // 5x5: IRONY/KNOLL/BLOOM across, OBOES down
+    answers:[
+      ['I','R','O','N','Y'],
+      ['#','#','B','#','#'],
+      ['K','N','O','L','L'],
+      ['#','#','E','#','#'],
+      ['B','I','S','O','N'],
+    ],
+    words:[
+      {word:'IRONY',  clue:'When the opposite of what is expected happens; sarcasm', dir:'across', r:0, c:0},
+      {word:'OBOES',  clue:'Woodwind instruments with a narrow tube and double reed (plural)', dir:'down', r:0, c:2},
+      {word:'KNOLL',  clue:'A small, rounded hill or mound',                  dir:'across', r:2, c:0},
+      {word:'BISON',  clue:'A large North American wild ox, sometimes called a buffalo', dir:'across', r:4, c:0},
+    ]
+  },
+];
+
+// Active timers — keyed by areaId
+const cwTimers = {};
+
+function cwStartTimer(areaId) {
+  if(cwTimers[areaId]) clearInterval(cwTimers[areaId].interval);
+  let secs = 0;
+  const timerId = 'cwtimer-' + areaId;
+  cwTimers[areaId] = { interval: setInterval(() => {
+    secs++;
+    const el = document.getElementById(timerId);
+    if(el) { const m=Math.floor(secs/60), s=secs%60; el.textContent = `⏱ ${m}:${s.toString().padStart(2,'0')}`; }
+    else clearInterval(cwTimers[areaId].interval);
+  }, 1000), secs:0 };
+}
+
+function cwStopTimer(areaId) {
+  if(cwTimers[areaId]) clearInterval(cwTimers[areaId].interval);
+}
+
+function renderCrossword(areaId, scoreId, puzzle, btnId) {
+  const area = document.getElementById(areaId);
+  if(!area) return;
+  const rows = puzzle.answers.length;
+  const cols = puzzle.answers[0].length;
+
+  // Step 1: Compute which cell gets which number (left-to-right, top-to-bottom)
+  const cellNums = {};   // "r,c" -> number
+  const numToWord = {};  // number -> word definition {word,clue,dir,r,c}
+  let n = 1;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+    if(puzzle.answers[r][c]==='#') continue;
+    const isAcrossStart = (c===0 || puzzle.answers[r][c-1]==='#') && (c+1<cols && puzzle.answers[r][c+1]!=='#');
+    const isDownStart   = (r===0 || puzzle.answers[r-1][c]==='#') && (r+1<rows && puzzle.answers[r+1][c]!=='#');
+    if(isAcrossStart || isDownStart) {
+      cellNums[r+','+c] = n;
+      // Match this cell position to a word definition
+      puzzle.words.forEach(w => {
+        if(w.r===r && w.c===c) numToWord[n] = w;
+      });
+      n++;
+    }
+  }
+
+  // Step 2: Build grid
+  let gridHtml = `<div class="cw-grid" style="grid-template-columns:repeat(${cols},40px)">`;
+  for(let r=0;r<rows;r++) {
+    for(let c=0;c<cols;c++) {
+      const ans = puzzle.answers[r][c];
+      const num = cellNums[r+','+c];
+      if(ans==='#') {
+        gridHtml += `<div class="cw-black"></div>`;
+      } else {
+        gridHtml += `<div class="cw-wrap">
+          ${num ? `<span class="cw-cellnum">${num}</span>` : ''}
+          <input class="cw-cell" maxlength="1" disabled
+            data-r="${r}" data-c="${c}" data-ans="${ans}" data-area="${areaId}" data-dir=""
+            oninput="cwInput(this)" onkeydown="cwKey(event,this)" onclick="cwCellClick(this)"
+            style="background:#F0EBE4;color:#bbb">
+        </div>`;
+      }
+    }
+  }
+  gridHtml += `</div>`;
+
+  // Step 3: Build clues using computed numbers
+  const acrossClues = [], downClues = [];
+  Object.entries(numToWord).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(([num, w]) => {
+    if(w.dir==='across') acrossClues.push(`<div class="cw-clue">${num}. ${w.clue}</div>`);
+    else                  downClues.push(`<div class="cw-clue">${num}. ${w.clue}</div>`);
+  });
+  let cluesHtml = `<div class="cw-clues">`;
+  if(acrossClues.length) cluesHtml += `<div class="cw-clue-head">➡️ Across</div>` + acrossClues.join('');
+  if(downClues.length)   cluesHtml += `<div class="cw-clue-head">⬇️ Down</div>`   + downClues.join('');
+  cluesHtml += `</div>`;
+
+  area.innerHTML = `
+    <div style="text-align:center">
+      <div class="cw-timer" id="cwtimer-${areaId}" style="color:#ccc">⏱ 0:00</div>
+      ${gridHtml}
+      ${cluesHtml}
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px">
+        <button class="cw-check-btn" id="cwstart-${areaId}"
+          onclick="cwStartPuzzle('${areaId}')"
+          style="background:var(--soft-green)">▶ Start Puzzle</button>
+        <button class="cw-check-btn" id="cwcheck-${areaId}"
+          onclick="checkCrossword('${areaId}','${scoreId}','${btnId}')"
+          style="display:none">✓ Check Answers</button>
+        <button class="cw-check-btn" id="cwreveal-${areaId}"
+          onclick="revealCrossword('${areaId}','${scoreId}','${btnId}')"
+          style="display:none;background:#9B8EA8">👁 Reveal Answers</button>
+      </div>
+    </div>`;
+
+  document.getElementById(scoreId).textContent = '';
+  document.getElementById(btnId).style.display = 'none';
+}
+
+function cwStartPuzzle(areaId) {
+  const area = document.getElementById(areaId);
+  area.querySelectorAll('.cw-cell').forEach(el => {
+    el.disabled = false; el.style.background=''; el.style.color='';
+  });
+  const timerEl = document.getElementById('cwtimer-' + areaId);
+  if(timerEl) timerEl.style.color = 'var(--warm-orange)';
+  cwStartTimer(areaId);
+  document.getElementById('cwstart-'  + areaId).style.display = 'none';
+  document.getElementById('cwcheck-'  + areaId).style.display = 'inline-flex';
+  document.getElementById('cwreveal-' + areaId).style.display = 'inline-flex';
+  // Focus first editable cell and set direction based on whether it starts across or down
+  const first = area.querySelector('.cw-cell');
+  if(first) { cwSetDir(first, areaId); first.focus(); }
+}
+
+// Determine natural direction for a cell: across if it has row neighbours, else down
+function cwNaturalDir(el, areaId) {
+  const r = parseInt(el.dataset.r), c = parseInt(el.dataset.c);
+  const area = document.getElementById(areaId);
+  const left  = area.querySelector(`[data-r="${r}"][data-c="${c-1}"]`);
+  const right = area.querySelector(`[data-r="${r}"][data-c="${c+1}"]`);
+  return (left || right) ? 'across' : 'down';
+}
+
+function cwSetDir(el, areaId) {
+  // If cell is intersection (has both row AND col neighbours), keep current dir if set
+  const r = parseInt(el.dataset.r), c = parseInt(el.dataset.c);
+  const area = document.getElementById(areaId);
+  const left  = area.querySelector(`[data-r="${r}"][data-c="${c-1}"]`);
+  const right = area.querySelector(`[data-r="${r}"][data-c="${c+1}"]`);
+  const up    = area.querySelector(`[data-r="${r-1}"][data-c="${c}"]`);
+  const down  = area.querySelector(`[data-r="${r+1}"][data-c="${c}"]`);
+  const hasAcross = left || right;
+  const hasDown   = up || down;
+  if(hasAcross && hasDown) {
+    // Intersection: keep existing dir or default to across
+    if(!el.dataset.dir) el.dataset.dir = 'across';
+  } else if(hasAcross) {
+    el.dataset.dir = 'across';
+  } else {
+    el.dataset.dir = 'down';
+  }
+}
+
+function cwInput(el) {
+  el.value = el.value.toUpperCase().replace(/[^A-Z]/g,'');
+  if(el.value.length !== 1) return;
+  const r = parseInt(el.dataset.r), c = parseInt(el.dataset.c);
+  const areaId = el.dataset.area;
+  const area = document.getElementById(areaId);
+  const dir = el.dataset.dir || cwNaturalDir(el, areaId);
+
+  if(dir === 'across') {
+    // Move right, skip already-filled cells, stay in across
+    let nc = c + 1;
+    while(true) {
+      const next = area.querySelector(`[data-r="${r}"][data-c="${nc}"]`);
+      if(!next) break;
+      next.dataset.dir = 'across';
+      next.focus();
+      break;
+    }
+  } else {
+    // Move down, stay in down
+    let nr = r + 1;
+    while(true) {
+      const next = area.querySelector(`[data-r="${nr}"][data-c="${c}"]`);
+      if(!next) break;
+      next.dataset.dir = 'down';
+      next.focus();
+      break;
+    }
+  }
+}
+
+function cwKey(e, el) {
+  const r = parseInt(el.dataset.r), c = parseInt(el.dataset.c);
+  const areaId = el.dataset.area;
+  const area = document.getElementById(areaId);
+
+  if(e.key === 'Backspace') {
+    e.preventDefault();
+    if(el.value !== '') { el.value=''; return; }
+    const dir = el.dataset.dir || cwNaturalDir(el, areaId);
+    if(dir==='across') {
+      const prev = area.querySelector(`[data-r="${r}"][data-c="${c-1}"]`);
+      if(prev) { prev.dataset.dir='across'; prev.focus(); prev.value=''; }
+    } else {
+      const prev = area.querySelector(`[data-r="${r-1}"][data-c="${c}"]`);
+      if(prev) { prev.dataset.dir='down'; prev.focus(); prev.value=''; }
+    }
+    return;
+  }
+
+  // Tab / arrow keys to switch direction or jump words
+  if(e.key==='Tab') {
+    e.preventDefault();
+    const cur = el.dataset.dir || cwNaturalDir(el, areaId);
+    const r2=parseInt(el.dataset.r), c2=parseInt(el.dataset.c);
+    const left  = area.querySelector(`[data-r="${r2}"][data-c="${c2-1}"]`);
+    const right = area.querySelector(`[data-r="${r2}"][data-c="${c2+1}"]`);
+    const up    = area.querySelector(`[data-r="${r2-1}"][data-c="${c2}"]`);
+    const down  = area.querySelector(`[data-r="${r2+1}"][data-c="${c2}"]`);
+    if(cur==='across' && (up||down)) { el.dataset.dir='down'; }
+    else if(cur==='down' && (left||right)) { el.dataset.dir='across'; }
+    return;
+  }
+
+  // Click sets direction
+  el.addEventListener('click', function onClick() {
+    cwSetDir(el, areaId);
+    el.removeEventListener('click', onClick);
+  }, {once:true});
+}
+
+// When user clicks a cell, toggle direction if it's an intersection
+function cwCellClick(el) {
+  const r = parseInt(el.dataset.r), c = parseInt(el.dataset.c);
+  const areaId = el.dataset.area;
+  const area = document.getElementById(areaId);
+  const left  = area.querySelector(`[data-r="${r}"][data-c="${c-1}"]`);
+  const right = area.querySelector(`[data-r="${r}"][data-c="${c+1}"]`);
+  const up    = area.querySelector(`[data-r="${r-1}"][data-c="${c}"]`);
+  const down  = area.querySelector(`[data-r="${r+1}"][data-c="${c}"]`);
+  const hasAcross = left || right;
+  const hasDown   = up || down;
+  if(hasAcross && hasDown) {
+    // Toggle direction on second click of same cell
+    el.dataset.dir = (el.dataset.dir === 'across') ? 'down' : 'across';
+  } else if(hasAcross) { el.dataset.dir = 'across'; }
+  else { el.dataset.dir = 'down'; }
+}
+
+function revealCrossword(areaId, scoreId, btnId) {
+  cwStopTimer(areaId);
+  const area = document.getElementById(areaId);
+  area.querySelectorAll('.cw-cell').forEach(el => {
+    el.value = el.dataset.ans; el.classList.remove('wrong'); el.classList.add('correct'); el.disabled=true;
+  });
+  const timerEl = document.getElementById('cwtimer-' + areaId);
+  const timeStr = timerEl ? ' · ' + timerEl.textContent : '';
+  const score = document.getElementById(scoreId);
+  if(score) score.textContent = '👁 Answers revealed' + timeStr;
+  document.getElementById(btnId).style.display='inline-flex';
+  document.getElementById('cwcheck-'  + areaId).style.display='none';
+  document.getElementById('cwreveal-' + areaId).style.display='none';
+}
+
+
+function checkCrossword(areaId, scoreId, btnId) {
+  cwStopTimer(areaId);
+  const area  = document.getElementById(areaId);
+  const cells = area.querySelectorAll('.cw-cell');
+  let correct=0, total=0;
+  cells.forEach(el => {
+    total++;
+    el.classList.remove('correct','wrong');
+    if(el.value.toUpperCase() === el.dataset.ans) { el.classList.add('correct'); correct++; }
+    else el.classList.add('wrong');
+  });
+  const timerEl = document.getElementById('cwtimer-' + areaId);
+  const timeStr = timerEl ? ' · Time: ' + timerEl.textContent.replace('⏱ ','') : '';
+  const score = document.getElementById(scoreId);
+  if(score) score.textContent = correct===total
+    ? '🎉 Perfect — all correct!' + timeStr
+    : `${correct} / ${total} correct` + timeStr;
+  document.getElementById(btnId).style.display = 'inline-flex';
+}
+
+// Easy crossword
+let cwEasyIdx = -1;
+function startCrosswordEasy() {
+  cwEasyIdx = (cwEasyIdx+1) % CROSSWORDS_EASY.length;
+  renderCrossword('crossword-easy-area','crossword-easy-score',CROSSWORDS_EASY[cwEasyIdx],'crossword-easy-new-btn');
+}
+
+// Medium crossword
+let cwMedIdx = -1;
+function startCrossword() {
+  cwMedIdx = (cwMedIdx+1) % CROSSWORDS_MEDIUM.length;
+  renderCrossword('crossword-area','crossword-score',CROSSWORDS_MEDIUM[cwMedIdx],'crossword-new-btn');
+}
+
+// Hard crossword
+let cwHardIdx = -1;
+function startCrosswordHard() {
+  cwHardIdx = (cwHardIdx+1) % CROSSWORDS_HARD.length;
+  renderCrossword('crossword-hard-area','crossword-hard-score',CROSSWORDS_HARD[cwHardIdx],'crossword-hard-new-btn');
+}
+
+
+// ===== MEMORY HARD (6 pairs) =====
+let memHardFlipped=[], memHardMatched=[], memHardLocked=false, memHardMoves=0;
+const MEM_HARD_EMOJIS=['🦁','🐘','🦋','🌺','⚡','🎸','🍕','🎯','🏆','🌍','🔮','🎪'];
+
+function startMemoryHard(){
+  memHardFlipped=[]; memHardMatched=[]; memHardLocked=false; memHardMoves=0;
+  const pairs = MEM_HARD_EMOJIS.slice(0,8);  // 8 pairs = 16 cards = 4x4 grid
+  const cards = [...pairs,...pairs].sort(()=>Math.random()-0.5);
+  const area=document.getElementById('memory-hard-area');
+  if(!area)return;
+  area.innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:360px;margin:0 auto">
+    ${cards.map((e,i)=>`<div class="mem-card" id="mh${i}" data-val="${e}" data-idx="${i}"
+      onclick="flipMemHard(this)"
+      style="height:68px;background:#E8D5C4;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;transition:all 0.2s">❓</div>`).join('')}
+  </div><div id="mem-hard-moves" style="text-align:center;margin-top:10px;font-size:13px;color:var(--text-mid)">Moves: 0</div>`;
+  document.getElementById('memory-hard-score').textContent='';
+  document.getElementById('memory-hard-new-btn').style.display='none';
+}
+
+function flipMemHard(el){
+  if(memHardLocked)return;
+  if(memHardFlipped.includes(el)||memHardMatched.includes(el.dataset.val))return;
+  el.textContent=el.dataset.val; el.style.background='white';
+  memHardFlipped.push(el);
+  if(memHardFlipped.length===2){
+    memHardLocked=true; memHardMoves++;
+    document.getElementById('mem-hard-moves').textContent='Moves: '+memHardMoves;
+    const [a,b]=memHardFlipped;
+    if(a.dataset.val===b.dataset.val){
+      a.style.background='#DFF2E4'; b.style.background='#DFF2E4';
+      memHardMatched.push(a.dataset.val);
+      memHardFlipped=[]; memHardLocked=false;
+      if(memHardMatched.length===8){
+        document.getElementById('memory-hard-score').textContent=`🎉 Matched all 8 in ${memHardMoves} moves!`;
+        document.getElementById('memory-hard-new-btn').style.display='inline-flex';
+      }
+    } else {
+      setTimeout(()=>{
+        a.textContent='❓'; a.style.background='#E8D5C4';
+        b.textContent='❓'; b.style.background='#E8D5C4';
+        memHardFlipped=[]; memHardLocked=false;
+      },900);
+    }
+  }
+}
+
+// ===== MIGRATION: merge old localStorage key =====
+const oldData = localStorage.getItem('seniorCompanion');
+if(oldData) {
+  try {
+    const old = JSON.parse(oldData);
+    ['meds','birthdays','notes','contacts','reminders','appointments'].forEach(k=>{
+      if(!data[k]) data[k]=[];
+      if(old[k] && old[k].length>0) {
+        const existingIds = new Set(data[k].map(x=>x.id));
+        old[k].forEach(item=>{ if(!existingIds.has(item.id)) data[k].push(item); });
+      }
+    });
+    if(old.medTaken) Object.assign(data.medTaken, old.medTaken);
+    if(old.savedLocations) {
+      old.savedLocations.forEach(loc=>{ if(!data.savedLocations.includes(loc)) data.savedLocations.push(loc); });
+    }
+    save();
+  } catch(e) { console.warn('Migration error:', e); }
+}
+
+// Migrate old med format
+data.meds.forEach(m=>{
+  if(!m.doseLabels||m.doseLabels.length===0){
+    m.doseLabels=getMedDoseLabels(m);
+    if(typeof m.freq==='string'){
+      const f=m.freq.toLowerCase();
+      if(f.includes('twice')||f.includes('two')) m.freq=2;
+      else if(f.includes('three')) m.freq=3;
+      else if(f.includes('four'))  m.freq=4;
+      else if(f.includes('as needed')) m.freq=0;
+      else m.freq=1;
+    }
+  }
+});
+save();
+
+// ===== INIT =====
+renderSavedPlaces();
+initAvatarPicker();
+render();
+updateMedTimeInputs('med');
+updateMedTimeInputs('med');
+
+// Init difficulty and games
+initDifficulty();
+// Start games for default level (easy)
+loadPositivity();
+loadFact();
+loadTrueFalse();
+loadWordSort();
+startMemory();
+loadMath();
+startCrosswordEasy();
+
+// Start alarm checker
+startAlarmChecker();
+
+// Request notification permission early
+setTimeout(requestNotifyPermission, 3000);
+
+// ===== PWA SETUP =====
+
+// ── Inline SVG icon (orange circle with hand wave) ───────────────────────────
+const NUDGE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="115" fill="#E76F51"/>
+  <text x="256" y="340" font-size="280" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,sans-serif">👋</text>
+</svg>`;
+const iconBlob = new Blob([NUDGE_ICON_SVG], {type:'image/svg+xml'});
+const iconUrl  = URL.createObjectURL(iconBlob);
+
+// Set apple touch icon
+const appleIcon = document.getElementById('apple-touch-icon');
+if(appleIcon) { appleIcon.rel='apple-touch-icon'; appleIcon.href=iconUrl; }
+
+// ── Inline Web App Manifest ──────────────────────────────────────────────────
+const manifest = {
+  name: 'Nudge — Daily Companion',
+  short_name: 'Nudge',
+  description: 'Medications, reminders, appointments, and more — all in one friendly app.',
+  start_url: './',
+  display: 'standalone',
+  orientation: 'portrait',
+  background_color: '#FFF8F0',
+  theme_color: '#E76F51',
+  icons: [
+    { src: iconUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+    { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+  ]
+};
+const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const manifestUrl  = URL.createObjectURL(manifestBlob);
+const manifestLink = document.getElementById('pwa-manifest');
+if(manifestLink) manifestLink.href = manifestUrl;
+
+// ── Push Notification Setup ──────────────────────────────────────────────────
+const VAPID_PUBLIC_KEY = 'BPqrkuOU4n76SaLCyXV3mbrcmf20ZrRn7CIJa75pwbup_ftd9jAVJuWMoB30TZ1ODGfrOCYJobkJELChkgTVryk';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function setupPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) { savePushSubscription(existing); return; }
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    savePushSubscription(subscription);
+  } catch(e) { console.log('Push setup failed:', e); }
+}
+
+function savePushSubscription(subscription) {
+  localStorage.setItem('nudge_push_sub', JSON.stringify(subscription));
+  fetch('/.netlify/functions/subscribe', {
+    method: 'POST',
+    body: JSON.stringify(subscription)
+  }).catch(() => {});
+}
+
+async function sendPushNotification(title, body) {
+  const subStr = localStorage.getItem('nudge_push_sub');
+  if (!subStr) return;
+  fetch('/.netlify/functions/send-notification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscription: JSON.parse(subStr), title, body })
+  }).catch(() => {});
+}
+
+setTimeout(setupPushNotifications, 2000);
+
+// ── Install prompt banner ─────────────────────────────────────────────────────
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Only show if not already installed and not dismissed before
+  if(!localStorage.getItem('nudge_install_dismissed')) {
+    showInstallBanner();
+  }
+});
+
+function showInstallBanner() {
+  if(document.getElementById('install-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = `
+    position:fixed; bottom:115px; left:50%; transform:translateX(-50%);
+    background:white; border-radius:16px; padding:14px 18px;
+    box-shadow:0 4px 24px rgba(100,60,30,0.2); z-index:7777;
+    display:flex; align-items:center; gap:12px; max-width:340px; width:calc(100% - 32px);
+    border:2px solid #E8D5C4; animation:slideUp 0.3s ease;
+  `;
+  banner.innerHTML = `
+    <span style="font-size:32px">📲</span>
+    <div style="flex:1">
+      <div style="font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#3D2B1F">Add Nudge to your Home Screen!</div>
+      <div style="font-family:'Nunito',sans-serif;font-size:12px;color:#6B4C3B;margin-top:2px">Works like a real app, even offline</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button onclick="installApp()" style="background:#E76F51;color:white;border:none;border-radius:10px;padding:8px 14px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer">Install</button>
+      <button onclick="dismissInstall()" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif">Not now</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+}
+
+function installApp() {
+  const banner = document.getElementById('install-banner');
+  if(banner) banner.remove();
+  if(deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(r => {
+      if(r.outcome === 'accepted') localStorage.setItem('nudge_install_dismissed','1');
+      deferredInstallPrompt = null;
+    });
+  }
+}
+
+function dismissInstall() {
+  const banner = document.getElementById('install-banner');
+  if(banner) banner.remove();
+  localStorage.setItem('nudge_install_dismissed','1');
+}
+
+// ── iOS "Add to Home Screen" tip (Safari doesn't support beforeinstallprompt) ─
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneMode = window.navigator.standalone === true;
+if(isIOS && !isInStandaloneMode && !localStorage.getItem('nudge_install_dismissed')) {
+  setTimeout(() => {
+    if(document.getElementById('install-banner')) return;
+    const tip = document.createElement('div');
+    tip.id = 'install-banner';
+    tip.style.cssText = `
+      position:fixed; bottom:115px; left:50%; transform:translateX(-50%);
+      background:white; border-radius:16px; padding:14px 18px;
+      box-shadow:0 4px 24px rgba(100,60,30,0.2); z-index:7777;
+      max-width:340px; width:calc(100% - 32px);
+      border:2px solid #E8D5C4; animation:slideUp 0.3s ease;
+      font-family:'Nunito',sans-serif;
+    `;
+    tip.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:800;color:#3D2B1F">📲 Add Nudge to your Home Screen</div>
+        <button onclick="dismissInstall()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#CCC">✕</button>
+      </div>
+      <div style="font-size:13px;color:#6B4C3B;line-height:1.6">
+        1. Tap the <strong>Share button</strong> at the bottom of Safari &nbsp;⬆️<br>
+        2. Scroll down and tap <strong>"Add to Home Screen"</strong><br>
+        3. Tap <strong>Add</strong> — done! It works like a real app 🎉
+      </div>
+    `;
+    document.body.appendChild(tip);
+  }, 2500);
+}
+
+</script>
+</body>
+</html>
